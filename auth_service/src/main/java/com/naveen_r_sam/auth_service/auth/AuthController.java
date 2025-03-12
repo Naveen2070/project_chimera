@@ -1,12 +1,26 @@
 package com.naveen_r_sam.auth_service.auth;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.naveen_r_sam.auth_service.model.Users;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class AuthController {
-    @GetMapping("/login")
-    public String login() {
-        return "login";
+
+    private final IAuthService authService;
+
+    public AuthController(IAuthService authService) {
+        this.authService = authService;
+    }
+
+    @PostMapping("/register")
+    @ResponseBody
+    public ResponseEntity<?> registerUser(@RequestBody Users user) {
+        return authService.registerUser(user);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody Users user) {
+        return authService.authenticateUser(user);
     }
 }
