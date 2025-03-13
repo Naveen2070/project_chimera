@@ -1,0 +1,83 @@
+package com.naveen_r_sam.gateway_service.filters;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.gateway.filter.GatewayFilter;
+import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
+
+@Component
+public class AuthenticationFilter extends AbstractGatewayFilterFactory<AuthenticationFilter.Config> {
+
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    public AuthenticationFilter() {
+        super(Config.class);
+    }
+
+    @Override
+    public GatewayFilter apply(Config config) {
+
+        return (exchange, chain) -> {
+
+            var request = exchange.getRequest();
+
+            // Bypass login endpoints, actuator, etc.
+            if (request.getURI().getPath().contains("/auth") ||
+                    request.getURI().getPath().contains("/actuator")) {
+                return chain.filter(exchange);
+            }
+
+            // Extract Authorization Header
+            if (!request.getHeaders().containsKey("Authorization")) {
+                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                return exchange.getResponse().setComplete();
+            }
+
+            String authHeader = request.getHeaders().getOrEmpty("Authorization").get(0);
+
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                return exchange.getResponse().setComplete();
+            }
+
+            String token = authHeader.substring(7);
+
+            try {
+                SecretKey signingKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+
+                Claims claims = Jwts.parser()
+                        .verifyWith(signingKey)
+                        .build()
+                        .parseClaimsJws(token)
+                        .getBody();
+
+                // Optional: You can extract data from claims and add it to headers if needed
+                String username = claims.getSubject();
+
+                exchange.getRequest().mutate()
+                        .header("X-Auth-User", username) // Pass it downstream
+                        .build();
+
+            } catch (Exception e) {
+                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                return exchange.getResponse().setComplete();
+            }
+
+            return chain.filter(exchange);
+        };
+    }
+
+    public static class Config {
+        // Put configuration properties here if needed
+    }
+}
