@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Steeltoe.Discovery.Client;
 using Steeltoe.Management.Endpoint;
 

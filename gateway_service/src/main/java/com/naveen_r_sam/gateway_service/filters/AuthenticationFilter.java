@@ -35,7 +35,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         String path = request.getURI().getPath();
 
         // Bypass auth endpoints (optional)
-        if (path.matches("/auth-service/.*") || path.matches(".*/actuator.*")) {
+        if (path.matches("/auth/.*") || path.matches(".*/actuator.*")) {
             return chain.filter(exchange);
         }
 
