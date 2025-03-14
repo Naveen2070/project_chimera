@@ -5,6 +5,8 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -26,6 +28,7 @@ import java.util.function.Function;
 @Component
 public class AuthenticationFilter implements GlobalFilter, Ordered {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthenticationFilter.class);
     @Value("${jwt.secret}")
     private String jwtSecret;
 
@@ -41,6 +44,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
         if (!request.getHeaders().containsKey("Authorization")) {
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            System.out.println("NO AUTH HEADER");
             return exchange.getResponse().setComplete();
         }
 
@@ -48,6 +52,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            System.out.println("INVALID AUTH HEADER");
             return exchange.getResponse().setComplete();
         }
 
@@ -96,6 +101,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             ).build();
 
         } catch (Exception e) {
+            log.error("e: ", e);
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
