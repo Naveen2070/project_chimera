@@ -40,7 +40,7 @@ public class Users implements Serializable {
 
     private String password;
 
-    private String role;
+    private String role = "USER";
 
     @Column(nullable = false)
     private Integer status = 1;

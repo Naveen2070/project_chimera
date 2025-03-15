@@ -20,7 +20,8 @@ public class GatewayServiceApplication {
 						.filters(f -> f.stripPrefix(1))
 						.uri("lb://AUTH-SERVICE"))
 				.route("user-service", r -> r.path("/user/**")
-						.filters(f -> f.stripPrefix(1))
+						.filters(f -> f
+								.stripPrefix(1))
 						.uri("lb://USER-SERVICE"))
 				.build();
 	}

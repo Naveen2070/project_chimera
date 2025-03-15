@@ -1,6 +1,8 @@
 package com.naveen_r_sam.auth_service.auth;
 
+import com.naveen_r_sam.auth_service.dto.LoginRequestDTO;
 import com.naveen_r_sam.auth_service.dto.LoginResponseDTO;
+import com.naveen_r_sam.auth_service.dto.SignUpDTO;
 import com.naveen_r_sam.auth_service.security.jwt.JWTService;
 import com.naveen_r_sam.auth_service.model.Users;
 import com.naveen_r_sam.auth_service.dto.UsersDTO;
@@ -28,14 +30,20 @@ public class AuthService implements IAuthService {
         this._jwtService = jwtService;
     }
 
-    public ResponseEntity<?> registerUser(Users user) {
+    public ResponseEntity<?> registerUser(SignUpDTO user) {
         if (user == null) {
             return ResponseEntity.badRequest().body("User cannot be null");
         }
 
-        user.setPassword(_passwordEncoder.encode(user.getPassword()));
+        Users newUser = new Users();
 
-        Users savedUser = _usersRepository.save(user);
+        newUser.setFirstName(user.getFirstName());
+        newUser.setLastName(user.getLastName());
+        newUser.setEmail(user.getEmail());
+        newUser.setUsername(user.getUsername());
+        newUser.setPassword(_passwordEncoder.encode(user.getPassword()));
+
+        Users savedUser = _usersRepository.save(newUser);
         UsersDTO response = new UsersDTO(
                 savedUser.getId(),
                 savedUser.getFirstName(),
@@ -51,7 +59,7 @@ public class AuthService implements IAuthService {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    public ResponseEntity<?> authenticateUser(Users user) {
+    public ResponseEntity<?> authenticateUser(LoginRequestDTO user) {
 
         try {
             Authentication authentication = _authenticationManager.authenticate(
