@@ -18,7 +18,7 @@ builder.Services.AddControllers();
 // Add CORS configuration
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowGateway", policy =>
+    options.AddPolicy(name:"AllowGateway", policy =>
     {
         policy.WithOrigins("http://localhost:8080")
               .AllowAnyHeader()
@@ -27,7 +27,7 @@ builder.Services.AddCors(options =>
               .WithExposedHeaders("Access-Control-Allow-Origin", "Access-Control-Allow-Headers", "Access-Control-Allow-Methods");
     });
 
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy(name:"AllowAll", policy =>
     {
         policy.AllowAnyOrigin()
               .AllowAnyHeader()
@@ -49,14 +49,57 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "User Service API", 
-        Version = "v1",
-        Description = "API for managing users within the system.",
+        Title = "Chimera User Service", 
+        Version = "1.0.0",
+        Description = "This API provides user management capabilities for the Chimera IAM system.",
         Contact = new OpenApiContact
         {
             Name = "Naveen R",
             Email = "naveenrameshcud@gmail.com",
             Url = new Uri("https://naveen2070.github.io/portfolio")
+        },
+        License = new OpenApiLicense
+        {
+            Name = "Apache 2.0",
+            Url = new Uri("https://www.apache.org/licenses/LICENSE-2.0")
+        }
+    });
+
+    c.AddServer(new OpenApiServer
+    {
+        Url = "http://localhost:5035", // Replace with actual service URL
+        Description = "Local User Service"
+    });
+
+    c.AddServer(new OpenApiServer
+    {
+        Url = "http://localhost:8080/user", // Adjust to match your API Gateway route
+        Description = "API Gateway"
+    });
+
+    // Add JWT Authentication to Swagger 
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter 'Bearer {token}' without quotes"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
         }
     });
 
@@ -82,17 +125,9 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.Use(async (context, next) =>
-{
-    Console.WriteLine($"Origin Header: {context.Request.Headers.Origin}");
-    await next();
-});
-
-
-// Use CORS policy
-app.UseCors("AllowGateway");
-
 app.UseHttpsRedirection();
+
+app.UseCors("AllowGateway");
 
 app.UseAuthorization();
 

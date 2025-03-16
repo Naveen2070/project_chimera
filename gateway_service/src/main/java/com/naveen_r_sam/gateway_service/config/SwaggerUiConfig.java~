@@ -50,7 +50,7 @@ public class SwaggerUiConfig implements ApplicationListener<HeartbeatEvent> {
             Set<SwaggerUiConfigProperties.SwaggerUrl> urls = new LinkedHashSet<>();
 
             for (String serviceName : services) {
-                if (serviceName.equalsIgnoreCase("consul")|| serviceName.equalsIgnoreCase("gateway-service")) {
+                if (serviceName.equalsIgnoreCase("consul")) {
                     continue;
                 }
 
@@ -70,10 +70,10 @@ public class SwaggerUiConfig implements ApplicationListener<HeartbeatEvent> {
             }
 
             // Manually add the API Gateway service docs
-            SwaggerUiConfigProperties.SwaggerUrl gatewayUrl = new SwaggerUiConfigProperties.SwaggerUrl();
-            gatewayUrl.setName("gateway-service");
-            gatewayUrl.setUrl(GATEWAY_URL + "/v3/api-docs");
-            urls.add(gatewayUrl);
+//            SwaggerUiConfigProperties.SwaggerUrl gatewayUrl = new SwaggerUiConfigProperties.SwaggerUrl();
+//            gatewayUrl.setName("gateway-service");
+//            gatewayUrl.setUrl(GATEWAY_URL + "/v3/api-docs");
+//            urls.add(gatewayUrl);
 
             swaggerUiConfigProperties.setUrls(urls);
             lastKnownServices = currentServices;
