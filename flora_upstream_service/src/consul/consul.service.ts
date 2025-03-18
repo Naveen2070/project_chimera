@@ -32,7 +32,7 @@ export class ConsulService implements OnModuleInit, BeforeApplicationShutdown {
     try {
       await this.consul.agent.service.register({
         name: this.serviceId,
-        address: '127.0.0.1',
+        address: 'localhost',
         port: 3030,
         tags: ['rabbitmq', 'flora', 'upstream'],
         meta: {
@@ -40,8 +40,9 @@ export class ConsulService implements OnModuleInit, BeforeApplicationShutdown {
           description: 'RabbitMQ producer for flora data',
         },
         check: {
+          status: 'passing',
           name: 'Flora upstream service health check',
-          http: `http://127.0.0.1:3030/actuator/health`,
+          http: 'http://localhost:3030/actuator/health',
           interval: '10s',
           timeout: '5s',
           deregistercriticalserviceafter: '1m',

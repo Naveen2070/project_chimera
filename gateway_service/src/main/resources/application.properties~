@@ -24,6 +24,13 @@ spring.cloud.consul.discovery.interval=15s
 spring.cloud.consul.discovery.timeout=10s
 spring.cloud.consul.discovery.deregister-critical-service-after=1m
 
+spring.cloud.gateway.globalcors.cors-configurations.[/**].allowedOrigins=http://localhost:8080
+spring.cloud.gateway.globalcors.cors-configurations.[/**].allowedMethods=*
+spring.cloud.gateway.globalcors.cors-configurations.[/**].allowedHeaders=*
+spring.cloud.gateway.globalcors.cors-configurations.[/**].exposedHeaders=Access-Control-Allow-Origin, Access-Control-Allow-Headers, Access-Control-Allow-Methods
+spring.cloud.gateway.globalcors.cors-configurations.[/**].allowCredentials=true
+
+
 # Spring doc Config
 springdoc.swagger-ui.path=/swagger
 

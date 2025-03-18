@@ -18,6 +18,13 @@ async function bootstrap() {
   // Enable graceful shutdown
   app.enableShutdownHooks();
 
+  app.enableCors({
+    origin: '*',
+    methods: '*',
+    allowedHeaders: '*',
+    credentials: true,
+  });
+
   await app.startAllMicroservices();
   await app.listen(process.env.PORT ?? 3030);
 }
