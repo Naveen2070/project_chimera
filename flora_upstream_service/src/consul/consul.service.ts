@@ -1,15 +1,20 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  BeforeApplicationShutdown,
+} from '@nestjs/common';
 import Consul from 'consul';
 
 @Injectable()
-export class ConsulService implements OnModuleInit, OnModuleDestroy {
+export class ConsulService implements OnModuleInit, BeforeApplicationShutdown {
   private consul: Consul;
-  private readonly serviceId = 'chimera-flora-upstream';
+  private readonly serviceId = 'flora-upstream-service';
 
   constructor() {
     this.consul = new Consul({
       host: 'localhost',
       port: 8500,
+      secure: false,
     });
   }
 
@@ -17,24 +22,26 @@ export class ConsulService implements OnModuleInit, OnModuleDestroy {
     await this.registerService();
   }
 
-  async onModuleDestroy() {
+  async beforeApplicationShutdown() {
+    // This will be called when NestJS is preparing to shut down
+    console.log('Shutting down...');
     await this.deregisterService();
   }
 
   private async registerService() {
     try {
       await this.consul.agent.service.register({
-        id: this.serviceId,
-        name: 'chimera-flora-upstream',
-        address: '10.0.0.5',
-        port: 3000,
+        name: this.serviceId,
+        address: '127.0.0.1',
+        port: 3030,
         tags: ['rabbitmq', 'flora', 'upstream'],
         meta: {
           protocol: 'rabbitmq',
           description: 'RabbitMQ producer for flora data',
         },
         check: {
-          http: `http://10.0.0.5:3000/actuator/health`,
+          name: 'Flora upstream service health check',
+          http: `http://127.0.0.1:3030/actuator/health`,
           interval: '10s',
           timeout: '5s',
           deregistercriticalserviceafter: '1m',
