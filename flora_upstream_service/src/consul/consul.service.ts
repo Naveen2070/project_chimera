@@ -42,10 +42,10 @@ export class ConsulService implements OnModuleInit, BeforeApplicationShutdown {
         check: {
           status: 'passing',
           name: 'Flora upstream service health check',
-          http: 'http://localhost:3030/actuator/health',
-          interval: '10s',
-          timeout: '5s',
-          deregistercriticalserviceafter: '1m',
+          http: 'http://host.docker.internal:3030/actuator/health',
+          interval: '15s',
+          timeout: '10s',
+          deregistercriticalserviceafter: '5m',
         },
       });
 

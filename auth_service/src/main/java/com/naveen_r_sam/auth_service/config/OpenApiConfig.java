@@ -17,7 +17,6 @@ public class OpenApiConfig {
                         .title("Chimera Auth Service")
                         .version("1.0.0")
                         .description("This API provides authentication and authorization tokens for Chimera Services")
-                        .version("1.0.0")
 //                        .termsOfService("https://naveenr.com/terms")
                         .contact(new Contact()
                                 .name("Naveen R")

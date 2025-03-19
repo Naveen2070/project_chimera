@@ -23,6 +23,10 @@ public class GatewayServiceApplication {
 						.filters(f -> f
 								.stripPrefix(1))
 						.uri("lb://USER-SERVICE"))
+				.route("flora-upstream-service", r -> r.path("/flora-upstream/**")
+						.filters(f -> f
+								.stripPrefix(1))
+						.uri("lb://FLORA-UPSTREAM-SERVICE"))
 				.build();
 	}
 

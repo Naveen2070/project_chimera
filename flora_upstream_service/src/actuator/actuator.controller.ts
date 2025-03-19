@@ -12,10 +12,14 @@ export class ActuatorController {
     'no-store, no-cache, must-revalidate, proxy-revalidate',
   )
   @Header('Pragma', 'no-cache')
+  @Header('Content-Type', 'application/json')
   async getHealth() {
     const RmqStatus = await this.actuatorService.isHealthy();
     return {
       status: RmqStatus.status === 'up' ? 'UP' : 'DOWN',
+      components: {
+        RmqStatus,
+      },
     };
   }
 }
