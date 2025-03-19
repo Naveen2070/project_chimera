@@ -26,10 +26,11 @@ func RegisterWithConsul() error {
 		Port:    Config.ServicePort,
 		Tags:    []string{"fiber", "gene bank", "golang", "rabbitmq"},
 		Check: &api.AgentServiceCheck{
-			Status:   "passing",
-			HTTP:     "http://host.docker.internal:" + strconv.Itoa(Config.ServicePort) + "/actuator/health",
-			Interval: "5s",
-			Timeout:  "3s",
+			Status:                         Config.Status,
+			HTTP:                           "http://host.docker.internal:" + strconv.Itoa(Config.ServicePort) + "/actuator/health",
+			Interval:                       Config.Interval,
+			Timeout:                        Config.Timeout,
+			DeregisterCriticalServiceAfter: Config.DeregisterCriticalServiceAfter,
 		},
 	}
 
