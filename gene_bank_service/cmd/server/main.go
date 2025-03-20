@@ -9,9 +9,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 
+	"project_chimera/gene_bank_service/internal/actuator"
 	"project_chimera/gene_bank_service/internal/consul"
-	"project_chimera/gene_bank_service/internal/handlers"
-	"project_chimera/gene_bank_service/internal/handlers/actuator"
 	"project_chimera/gene_bank_service/internal/rabbitmq"
 )
 
@@ -40,7 +39,9 @@ func main() {
 	actuatorGroup := app.Group("/actuator")
 
 	// Register routes
-	app.Get("/hello", handlers.HelloHandler)
+	app.Get("/hello", func(c *fiber.Ctx) error {
+		return c.SendString("Hello, World!")
+	})
 	actuator.ActuatorRouter(actuatorGroup, UpstreamQueueHandler)
 
 	//logger setup

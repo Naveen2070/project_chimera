@@ -2,7 +2,6 @@ package actuator
 
 import (
 	"project_chimera/gene_bank_service/internal/rabbitmq"
-	"project_chimera/gene_bank_service/internal/services/actuator"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -14,12 +13,12 @@ type ActuatorHandler interface {
 
 // actuatorHandler is the concrete implementation of ActuatorHandler
 type actuatorHandler struct {
-	service    actuator.ActuatorService
+	service    ActuatorService
 	rmqHandler *rabbitmq.Handler
 }
 
 // NewActuatorHandler creates a new instance of actuatorHandler with a service dependency
-func NewActuatorHandler(service actuator.ActuatorService, rmqHandler *rabbitmq.Handler) ActuatorHandler {
+func NewActuatorHandler(service ActuatorService, rmqHandler *rabbitmq.Handler) ActuatorHandler {
 	return &actuatorHandler{service: service, rmqHandler: rmqHandler}
 }
 
@@ -45,7 +44,7 @@ func (h *actuatorHandler) RabbitMQHealth(c *fiber.Ctx) error {
 
 // ActuatorRouter registers actuator-related routes
 func ActuatorRouter(router fiber.Router, rmqHandler *rabbitmq.Handler) {
-	service := actuator.NewActuatorService()
+	service := NewActuatorService()
 	handler := NewActuatorHandler(service, rmqHandler)
 
 	router.Get("/health", handler.Health)
