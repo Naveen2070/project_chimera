@@ -105,19 +105,21 @@ func (c *RabbitMQClient) SendRPCCommand(queueName string, cmd string, data inter
 // SendAckCommand sends a message without waiting for a response (Ack-based)
 func (c *RabbitMQClient) SendAckCommand(queueName string, cmd string, data interface{}) error {
 	message := map[string]interface{}{
-		"cmd":  cmd,
-		"data": data,
+		"pattern": cmd,
+		"data":    data,
 	}
 
 	body, err := json.Marshal(message)
 	if err != nil {
 		return err
 	}
+	log.Println("Sent Ack-based command:", string(body))
 
 	err = c.channel.PublishWithContext(context.Background(),
 		"", queueName, false, false,
 		amqp091.Publishing{
 			ContentType: "application/json",
+			Headers:     amqp091.Table{},
 			Body:        body,
 		})
 

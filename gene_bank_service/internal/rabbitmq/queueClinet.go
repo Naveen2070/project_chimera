@@ -25,12 +25,12 @@ func (h *Handler) SendRequest(c *fiber.Ctx, cmd string) (interface{}, error) {
 	var data map[string]interface{}
 
 	if err := c.BodyParser(&data); err != nil {
-		return nil, c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
+		return nil, &fiber.Error{Code: fiber.StatusBadRequest, Message: "Invalid JSON"}
 	}
 
 	response, err := h.rpcClient.SendRPCCommand(h.queueName, cmd, data)
 	if err != nil {
-		return nil, c.Status(500).JSON(fiber.Map{"error": "Failed to send command"})
+		return nil, &fiber.Error{Code: fiber.StatusInternalServerError, Message: "Failed to send command"}
 	}
 
 	return response, nil
@@ -42,12 +42,12 @@ func (h *Handler) SendAckRequest(c *fiber.Ctx, cmd string) error {
 	var data map[string]interface{}
 
 	if err := c.BodyParser(&data); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
+		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "Invalid JSON"}
 	}
-	log.Printf("Received Ack-based command: %s", cmd)
+	log.Printf("Received request for Ack-based command: %s", cmd)
 	err := h.rpcClient.SendAckCommand(h.queueName, cmd, data)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to send command"})
+		return &fiber.Error{Code: fiber.StatusInternalServerError, Message: "Failed to send command"}
 	}
 
 	return nil
@@ -57,7 +57,7 @@ func (h *Handler) SendAckRequest(c *fiber.Ctx, cmd string) error {
 func (h *Handler) CheckQueueStatusHandler(c *fiber.Ctx) error {
 	err := h.rpcClient.CheckQueueStatus(h.queueName)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Queue is not reachable"})
+		return &fiber.Error{Code: fiber.StatusInternalServerError, Message: "Queue is not reachable"}
 	}
 
 	return c.JSON(fiber.Map{"message": "Queue is reachable"})
@@ -67,7 +67,7 @@ func (h *Handler) CheckQueueStatusHandler(c *fiber.Ctx) error {
 func (h *Handler) CheckRabbitMQStatusHandler(c *fiber.Ctx) error {
 	err := h.rpcClient.CheckRabbitMQStatus()
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "RabbitMQ is not reachable"})
+		return &fiber.Error{Code: fiber.StatusInternalServerError, Message: "RabbitMQ is not reachable"}
 	}
 
 	return c.JSON(fiber.Map{"message": "RabbitMQ is running"})

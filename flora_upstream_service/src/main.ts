@@ -13,6 +13,7 @@ async function bootstrap() {
       urls: ['amqp://admin:naveen@2007@localhost:5672'],
       queue: 'flora_upstream_queue',
       queueOptions: { durable: true, exclusive: false },
+      noAck: false,
     },
   });
 

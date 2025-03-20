@@ -34,7 +34,7 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 	if err := c.BodyParser(&data); err != nil {
 		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "Invalid JSON"}
 	}
-	err := s.rmqHandlers.SendAckRequest(c, "add_flora")
+	err := s.rmqHandlers.SendAckRequest(c, "addFlora")
 	if err != nil {
 		return err
 	}

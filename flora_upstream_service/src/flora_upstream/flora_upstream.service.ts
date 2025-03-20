@@ -4,8 +4,8 @@ import { UpdateFloraUpstreamDto } from './dto/update-flora_upstream.dto';
 
 @Injectable()
 export class FloraUpstreamService {
-  create(createFloraUpstreamDto: CreateFloraUpstreamDto) {
-    return 'This action adds a new floraUpstream';
+  create(createFloraUpstreamDto: any) {
+    return console.log(createFloraUpstreamDto);
   }
 
   findAll() {
