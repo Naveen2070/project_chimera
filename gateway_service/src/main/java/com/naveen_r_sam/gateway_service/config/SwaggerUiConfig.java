@@ -86,6 +86,7 @@ public class SwaggerUiConfig implements ApplicationListener<HeartbeatEvent> {
         return switch (serviceName.toLowerCase()) {
             case "user" -> GATEWAY_URL + "/user/swagger/v1/swagger.json"; // .NET service
             case "flora-upstream" -> GATEWAY_URL + "/flora-upstream/swagger/v1/swagger.json"; // .NET service
+            case "gene-bank" -> GATEWAY_URL + "/gene-bank/swagger/v1/swagger.json"; // .NET service
             default -> GATEWAY_URL + "/" + serviceName + "/v3/api-docs"; // Spring services
         };
     }

@@ -1,36 +1,56 @@
 package rabbitmq
 
 import (
+	"log"
+
 	"github.com/gofiber/fiber/v2"
 )
 
 // Handler struct holds dependencies
 type Handler struct {
-	rpcClient *RPCClient
+	rpcClient *RabbitMQClient
 	queueName string
 }
 
 // NewHandler creates a new Handler instance
-func NewQueueHandler(rpcClient *RPCClient, queueName string) *Handler {
+func NewQueueHandler(rpcClient *RabbitMQClient, queueName string) *Handler {
 	return &Handler{
 		rpcClient: rpcClient,
 		queueName: queueName,
 	}
 }
 
-// SendCreateCommand handles HTTP requests and sends a command to RabbitMQ
-func (h *Handler) SendCreateCommand(c *fiber.Ctx, cmd string) error {
+// SendRequest handles HTTP requests and sends a RPC command to RabbitMQ
+func (h *Handler) SendRequest(c *fiber.Ctx, cmd string) (interface{}, error) {
 	var data map[string]interface{}
+
+	if err := c.BodyParser(&data); err != nil {
+		return nil, c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
+	}
+
+	response, err := h.rpcClient.SendRPCCommand(h.queueName, cmd, data)
+	if err != nil {
+		return nil, c.Status(500).JSON(fiber.Map{"error": "Failed to send command"})
+	}
+
+	return response, nil
+}
+
+// SendAckRequest handles HTTP requests and sends an Ack-based command to RabbitMQ
+func (h *Handler) SendAckRequest(c *fiber.Ctx, cmd string) error {
+
+	var data map[string]interface{}
+
 	if err := c.BodyParser(&data); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
 	}
-
-	err := h.rpcClient.SendCreateCommand(h.queueName, cmd, data)
+	log.Printf("Received Ack-based command: %s", cmd)
+	err := h.rpcClient.SendAckCommand(h.queueName, cmd, data)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to send command"})
 	}
 
-	return c.JSON(fiber.Map{"message": "Command sent"})
+	return nil
 }
 
 // CheckQueueStatusHandler checks if the queue is reachable

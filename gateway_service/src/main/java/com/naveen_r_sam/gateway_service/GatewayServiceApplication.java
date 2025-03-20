@@ -23,6 +23,9 @@ public class GatewayServiceApplication {
 						.filters(f -> f
 								.stripPrefix(1))
 						.uri("lb://USER-SERVICE"))
+				.route("gene-bank-service", r -> r.path("/gene-bank/**")
+						.filters(f -> f.stripPrefix(1))
+						.uri("lb://GENE-BANK-SERVICE"))
 				.route("flora-upstream-service", r -> r.path("/flora-upstream/**")
 						.filters(f -> f
 								.stripPrefix(1))

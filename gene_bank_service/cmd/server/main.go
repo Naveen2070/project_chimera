@@ -1,50 +1,125 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/getkin/kin-openapi/openapi2"
+	"github.com/getkin/kin-openapi/openapi2conv"
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/swagger"
 
 	"project_chimera/gene_bank_service/internal/actuator"
 	"project_chimera/gene_bank_service/internal/consul"
+	"project_chimera/gene_bank_service/internal/flora"
 	"project_chimera/gene_bank_service/internal/rabbitmq"
 )
 
-func main() {
-	// Initialize the Fiber app
-	app := fiber.New()
+// @title Gene Bank Service API
+// @version 1.0.0
+// @description This API provides endpoints for gene bank service which is a part of the project chimera.
 
+// @contact.name Naveen R
+// @contact.url https://naveen2070.github.io/portfolio
+// @contact.email naveenrameshcud@gmail.com
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
+func main() {
 	// Set up RabbitMQ client
 	rabbitURL := "amqp://admin:naveen@2007@localhost:5672"
-	queueName := "flora_upstream_queue"
+	folraQueueName := "flora_upstream_queue"
 
-	rpcClient, err := rabbitmq.NewRPCClient(rabbitURL)
-
+	rpcClient, err := rabbitmq.NewRabbitMQClient(rabbitURL)
 	if err != nil {
 		log.Fatalf("Failed to initialize RabbitMQ: %v", err)
 	}
 	defer rpcClient.Close()
 
 	// Create queue handler
-	UpstreamQueueHandler := rabbitmq.NewQueueHandler(rpcClient, queueName)
+	FloraUpstreamQueueHandler := rabbitmq.NewQueueHandler(rpcClient, folraQueueName)
+
+	// List of RabbitMQ handlers
+	var rmqHandlers = []*rabbitmq.Handler{
+		FloraUpstreamQueueHandler,
+	}
+
+	// Initialize the Fiber app
+	app := fiber.New()
+
+	// set up cross-origin resource sharing (CORS) middleware
+	app.Use(cors.New(
+		cors.Config{
+			AllowOrigins: "*",
+			AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
+			AllowHeaders: "Content-Type, Authorization",
+		},
+	))
 
 	// Set up logging middleware
 	app.Use(logger.New())
 
+	// Serve Swagger JSON file (convert from Swagger 2.0 to OpenAPI 3.0)
+	app.Get("swagger/v1/swagger.json", func(c *fiber.Ctx) error {
+		// Read the Swagger 2.0 file
+		data, err := os.ReadFile("./docs/swagger.json")
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to read Swagger JSON")
+		}
+
+		// Unmarshal the JSON into an OpenAPI 2.0 structure
+		var doc openapi2.T
+		if err := json.Unmarshal(data, &doc); err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to parse Swagger JSON")
+		}
+
+		// Convert OpenAPI 2.0 to OpenAPI 3.0
+		openapi3Doc, err := openapi2conv.ToV3(&doc)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to convert to OpenAPI 3.0")
+		}
+
+		// add server info
+		openapi3Doc.Servers = []*openapi3.Server{
+			{
+				URL:         "http://localhost:5050",
+				Description: "Development Server",
+			}, {
+				URL:         "http://localhost:8080/gene-bank/",
+				Description: "Gateway Server",
+			},
+		}
+		// Serve the OpenAPI 3.0 JSON response
+		return c.JSON(openapi3Doc)
+	})
+
+	// Serve Swagger UI route (Static assets)
+	app.Get("/swagger/*", swagger.New(swagger.Config{
+		URL: "/swagger/v1/swagger.json",
+	}))
+
 	// Set up route groups
 	actuatorGroup := app.Group("/actuator")
+	floraGroup := app.Group("/flora")
 
 	// Register routes
 	app.Get("/hello", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")
 	})
-	actuator.ActuatorRouter(actuatorGroup, UpstreamQueueHandler)
+	actuator.ActuatorRouter(actuatorGroup, rmqHandlers)
+	flora.FloraRouter(floraGroup, FloraUpstreamQueueHandler)
 
-	//logger setup
+	// Logger setup
 	app.Use(logger.New(logger.Config{
 		Format: "${time} | ${ip}:${port} | ${status} | ${method} | ${path} | ${latency}\n",
 	}))
