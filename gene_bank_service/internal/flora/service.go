@@ -79,6 +79,7 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 		"Description":    payload.Description,
 		"Origin":         payload.Origin,
 		"OtherDetails":   payload.OtherDetails,
+		"Type":           payload.Type,
 	}
 	err = s.rmqHandlers.SendAckRequest(data, "add_flora")
 	if err != nil {

@@ -26,9 +26,11 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
+    "@nestjs/config": "^4.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/mapped-types": "*",
     "@nestjs/microservices": "^11.0.11",
+    "@nestjs/mongoose": "^11.0.2",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.0.6",
     "@prisma/client": "^6.5.0",
@@ -36,6 +38,7 @@
     "amqp-connection-manager": "^4.1.14",
     "amqplib": "^0.10.5",
     "consul": "^2.0.1",
+    "mongoose": "^8.12.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "uuid": "^11.1.0"

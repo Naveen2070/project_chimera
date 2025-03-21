@@ -2,16 +2,24 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  const configService = app.get(ConfigService);
+
+  const port = configService.get<number>('PORT') || 3030;
+  const RABBIT_MQ_URL = configService.get<string>('RABBIT_MQ_URL') as string;
+  const RABBIT_QUEUE_FLORA =
+    configService.get<string>('RABBIT_QUEUE_FLORA') || 'flora_upstream_queue';
 
   // Connect RabbitMQ microservice (consumer)
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
-      urls: ['amqp://admin:naveen@2007@localhost:5672'],
-      queue: 'flora_upstream_queue',
+      urls: [RABBIT_MQ_URL],
+      queue: RABBIT_QUEUE_FLORA,
       queueOptions: { durable: true, exclusive: false },
       noAck: false,
     },
@@ -50,10 +58,9 @@ async function bootstrap() {
   });
 
   await app.startAllMicroservices();
-  await app.listen(process.env.PORT ?? 3030, '0.0.0.0');
+  await app.listen(port, '0.0.0.0').then(() => {
+    console.log(`Server started on port ${port}`);
+  });
 }
-bootstrap()
-  .then(() => {
-    console.log('Server started on port', process.env.PORT ?? 3030);
-  })
-  .catch((err) => console.error(err));
+
+bootstrap().catch((err) => console.error(err));

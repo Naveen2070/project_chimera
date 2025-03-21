@@ -1,4 +1,4 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Headers } from '@nestjs/common';
 import {
   Ctx,
   MessagePattern,
@@ -6,39 +6,36 @@ import {
   RmqContext,
 } from '@nestjs/microservices';
 import { FloraUpstreamService } from './flora_upstream.service';
-import { CreateFloraUpstreamDto } from './dto/create-flora_upstream.dto';
 import { UpdateFloraUpstreamDto } from './dto/update-flora_upstream.dto';
+import { RabbitMqPayload } from './dto/rabbit-payload';
+import { FloraUpstream } from './entities/flora_upstream.entity';
 
 @Controller()
 export class FloraUpstreamController {
   constructor(private readonly floraUpstreamService: FloraUpstreamService) {}
 
   @MessagePattern({ cmd: 'add_flora' })
-  create(@Payload() data: any, @Ctx() context: RmqContext) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  create(
+    @Headers('X-Auth-User') headers,
+    @Payload() data: RabbitMqPayload,
+    @Ctx() context: RmqContext,
+  ) {
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+
+    const createFloraUpstreamDto: FloraUpstream = {
+      common_name: data.CommonName,
+      scientific_name: data.ScientificName,
+      user_id: 'aaaaaa',
+      type: data.Type,
+      Image: data.Image,
+      Description: data.Description,
+      Origin: data.Origin,
+      OtherDetails: data.OtherDetails,
+    };
     channel.ack(originalMsg);
 
-    const createFloraUpstreamDto: CreateFloraUpstreamDto = {
-      common_name: data.common_name,
-      scientific_name: data.scientific_name,
-      user_id: data.user_id,
-      type: data.type,
-    };
-
     return this.floraUpstreamService.create(createFloraUpstreamDto);
-  }
-
-  @MessagePattern('findAllFloraUpstream')
-  findAll() {
-    return this.floraUpstreamService.findAll();
-  }
-
-  @MessagePattern('findOneFloraUpstream')
-  findOne(@Payload() id: string) {
-    return this.floraUpstreamService.findOne(id);
   }
 
   @MessagePattern('updateFloraUpstream')
@@ -47,10 +44,5 @@ export class FloraUpstreamController {
       updateFloraUpstreamDto.id,
       updateFloraUpstreamDto,
     );
-  }
-
-  @MessagePattern('removeFloraUpstream')
-  remove(@Payload() id: string) {
-    return this.floraUpstreamService.remove(id);
   }
 }
