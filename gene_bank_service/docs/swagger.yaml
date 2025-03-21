@@ -9,6 +9,30 @@ definitions:
       status:
         type: string
     type: object
+  flora.FloraRequest:
+    properties:
+      common_name:
+        description: Common name of the plant
+        type: string
+      description:
+        description: Description of the plant
+        type: string
+      image_path:
+        description: Image URL or file reference
+        type: string
+      image_url:
+        description: Image URL or file reference
+        type: string
+      origin:
+        description: Origin of the plant
+        type: string
+      other_details:
+        description: Additional details about the plant
+        type: string
+      scientific_name:
+        description: Scientific name of the plant
+        type: string
+    type: object
 info:
   contact:
     email: naveenrameshcud@gmail.com
@@ -49,8 +73,7 @@ paths:
         name: flora
         required: true
         schema:
-          additionalProperties: true
-          type: object
+          $ref: '#/definitions/flora.FloraRequest'
       produces:
       - application/json
       responses:

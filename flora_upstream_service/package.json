@@ -17,7 +17,12 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "postinstall": "npx prisma generate",
+    "generate": "npx prisma generate --watch",
+    "migrate": "npx prisma migrate dev",
+    "deploy": "npx prisma migrate deploy",
+    "studio": "npx prisma studio"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -26,6 +31,7 @@
     "@nestjs/microservices": "^11.0.11",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.0.6",
+    "@prisma/client": "^6.5.0",
     "@types/consul": "^2.0.0",
     "amqp-connection-manager": "^4.1.14",
     "amqplib": "^0.10.5",
@@ -52,6 +58,7 @@
     "globals": "^16.0.0",
     "jest": "^29.7.0",
     "prettier": "^3.4.2",
+    "prisma": "^6.5.0",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",

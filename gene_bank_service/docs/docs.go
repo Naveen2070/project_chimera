@@ -68,8 +68,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/flora.FloraRequest"
                         }
                     }
                 ],
@@ -109,6 +108,39 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "flora.FloraRequest": {
+            "type": "object",
+            "properties": {
+                "common_name": {
+                    "description": "Common name of the plant",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "Description of the plant",
+                    "type": "string"
+                },
+                "image_path": {
+                    "description": "Image URL or file reference",
+                    "type": "string"
+                },
+                "image_url": {
+                    "description": "Image URL or file reference",
+                    "type": "string"
+                },
+                "origin": {
+                    "description": "Origin of the plant",
+                    "type": "string"
+                },
+                "other_details": {
+                    "description": "Additional details about the plant",
+                    "type": "string"
+                },
+                "scientific_name": {
+                    "description": "Scientific name of the plant",
                     "type": "string"
                 }
             }

@@ -1,26 +1,46 @@
 import { Injectable } from '@nestjs/common';
 import { CreateFloraUpstreamDto } from './dto/create-flora_upstream.dto';
 import { UpdateFloraUpstreamDto } from './dto/update-flora_upstream.dto';
+import { PrismaService } from 'src/prisma_client/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class FloraUpstreamService {
-  create(createFloraUpstreamDto: any) {
-    return console.log(createFloraUpstreamDto);
+  constructor(private prisma: PrismaService) {}
+  async create(createFloraUpstreamDto: CreateFloraUpstreamDto) {
+    return await this.prisma.flora.create({
+      data: createFloraUpstreamDto,
+    });
   }
 
-  findAll() {
-    return `This action returns all floraUpstream`;
+  async findAll(params?: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.FloraWhereUniqueInput;
+    where?: Prisma.FloraWhereUniqueInput;
+    orderBy?: Prisma.FloraOrderByWithRelationInput;
+  }) {
+    return await this.prisma.flora.findMany({
+      ...params,
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} floraUpstream`;
+  async findOne(id: string) {
+    return await this.prisma.flora.findUnique({
+      where: { id },
+    });
   }
 
-  update(id: number, updateFloraUpstreamDto: UpdateFloraUpstreamDto) {
-    return `This action updates a #${id} floraUpstream`;
+  async update(id: string, updateFloraUpstreamDto: UpdateFloraUpstreamDto) {
+    return await this.prisma.flora.update({
+      where: { id },
+      data: updateFloraUpstreamDto,
+    });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} floraUpstream`;
+  async remove(id: string) {
+    return await this.prisma.flora.delete({
+      where: { id },
+    });
   }
 }

@@ -1,3 +1,17 @@
+//	Copyright 2025 Naveen R
+//
+//		Licensed under the Apache License, Version 2.0 (the "License");
+//		you may not use this file except in compliance with the License.
+//		You may obtain a copy of the License at
+//
+//		http://www.apache.org/licenses/LICENSE-2.0
+//
+//		Unless required by applicable law or agreed to in writing, software
+//		distributed under the License is distributed on an "AS IS" BASIS,
+//		WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//		See the License for the specific language governing permissions and
+//		limitations under the License.
+
 package flora
 
 import (
@@ -36,13 +50,12 @@ func (h *floraHandler) GetFlora(c *fiber.Ctx) error {
 // @Tags Flora
 // @Accept json
 // @Produce json
-// @Param flora body map[string]interface{} true "Flora data"
+// @Param flora body FloraRequest true "Flora data"
 // @Success 200 {object} common.SuccessResponse
 // @Failure 400 {object} common.ErrorResponse
 // @Failure 500 {object} common.ErrorResponse
 // @Router /flora [post]
 func (h *floraHandler) PostFlora(c *fiber.Ctx) error {
-	log.Println("PostFlora handler called")
 	err := h.service.PostFlora(c)
 	log.Println(err)
 	if err != nil {

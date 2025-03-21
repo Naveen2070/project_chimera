@@ -1,7 +1,23 @@
+//	Copyright 2025 Naveen R
+//
+//		Licensed under the Apache License, Version 2.0 (the "License");
+//		you may not use this file except in compliance with the License.
+//		You may obtain a copy of the License at
+//
+//		http://www.apache.org/licenses/LICENSE-2.0
+//
+//		Unless required by applicable law or agreed to in writing, software
+//		distributed under the License is distributed on an "AS IS" BASIS,
+//		WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//		See the License for the specific language governing permissions and
+//		limitations under the License.
+
 package flora
 
 import (
+	"fmt"
 	"project_chimera/gene_bank_service/internal/rabbitmq"
+	"project_chimera/gene_bank_service/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -29,15 +45,46 @@ func (s *floraService) GetFlora(c *fiber.Ctx) error {
 
 // PostFlora handler for adding flora data
 func (s *floraService) PostFlora(c *fiber.Ctx) error {
-	var data map[string]interface{}
+	var payload FloraRequest
 
-	if err := c.BodyParser(&data); err != nil {
+	if err := c.BodyParser(&payload); err != nil {
 		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "Invalid JSON"}
 	}
-	err := s.rmqHandlers.SendAckRequest(c, "addFlora")
+
+	// Handle image conversion to byte array
+	var imageBytes []byte
+	var err error
+
+	if payload.ImageURL != "" {
+		// If the image is provided via a URL, fetch it
+		imageBytes, err = utils.FetchImageFromURL(payload.ImageURL)
+	} else if payload.ImagePath != "" {
+		// If the image is provided via a local path, read it
+		imageBytes, err = utils.FetchImageFromPath(payload.ImagePath)
+	} else {
+		// Handle case where there is no image provided
+		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "No image URL or path provided"}
+	}
+
+	if err != nil {
+		return &fiber.Error{Code: fiber.StatusInternalServerError, Message: fmt.Sprintf("Error fetching image: %v", err)}
+	}
+
+	// Send Ack request
+	var data map[string]interface{}
+	data = map[string]interface{}{
+		"CommonName":     payload.CommonName,
+		"ScientificName": payload.ScientificName,
+		"Image":          imageBytes,
+		"Description":    payload.Description,
+		"Origin":         payload.Origin,
+		"OtherDetails":   payload.OtherDetails,
+	}
+	err = s.rmqHandlers.SendAckRequest(data, "add_flora")
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
