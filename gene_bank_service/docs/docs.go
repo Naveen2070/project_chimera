@@ -68,7 +68,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.FloraRequest"
+                            "$ref": "#/definitions/dto.FloraUpdateRequest"
                         }
                     }
                 ],
@@ -180,7 +180,57 @@ const docTemplate = `{
                 },
                 "other_details": {
                     "description": "Additional details about the plant",
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "scientific_name": {
+                    "description": "Scientific name of the plant",
                     "type": "string"
+                },
+                "type": {
+                    "description": "Type of post",
+                    "type": "string"
+                }
+            }
+        },
+        "dto.FloraUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "common_name": {
+                    "description": "Common name of the plant",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "Description of the plant",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "Unique identifier for the plant",
+                    "type": "string"
+                },
+                "image": {
+                    "description": "Image data (bytes)",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "image_path": {
+                    "description": "Image URL or file reference",
+                    "type": "string"
+                },
+                "image_url": {
+                    "description": "Image URL or file reference",
+                    "type": "string"
+                },
+                "origin": {
+                    "description": "Origin of the plant",
+                    "type": "string"
+                },
+                "other_details": {
+                    "description": "Additional details about the plant",
+                    "type": "object",
+                    "additionalProperties": true
                 },
                 "scientific_name": {
                     "description": "Scientific name of the plant",

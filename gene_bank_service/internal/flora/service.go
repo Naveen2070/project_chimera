@@ -116,6 +116,8 @@ func (s *floraService) PutFlora(c *fiber.Ctx) error {
 	} else if payload.ImagePath != "" {
 		// If the image is provided via a local path, read it
 		imageBytes, err = utils.FetchImageFromPath(payload.ImagePath)
+	} else if len(payload.Image) > 0 {
+		imageBytes = payload.Image
 	} else {
 		// Handle case where there is no image provided
 		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "No image URL or path provided"}

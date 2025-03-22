@@ -69,7 +69,7 @@ func (h *floraHandler) PostFlora(c *fiber.Ctx) error {
 // @Tags Flora
 // @Accept json
 // @Produce json
-// @Param flora body dto.FloraRequest true "Flora data"
+// @Param flora body dto.FloraUpdateRequest true "Flora data"
 // @Success 200 {object} common.SuccessResponse
 // @Failure 400 {object} common.ErrorResponse
 // @Failure 500 {object} common.ErrorResponse

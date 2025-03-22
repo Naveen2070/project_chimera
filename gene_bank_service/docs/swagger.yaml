@@ -27,8 +27,45 @@ definitions:
         description: Origin of the plant
         type: string
       other_details:
+        additionalProperties: true
         description: Additional details about the plant
+        type: object
+      scientific_name:
+        description: Scientific name of the plant
         type: string
+      type:
+        description: Type of post
+        type: string
+    type: object
+  dto.FloraUpdateRequest:
+    properties:
+      common_name:
+        description: Common name of the plant
+        type: string
+      description:
+        description: Description of the plant
+        type: string
+      id:
+        description: Unique identifier for the plant
+        type: string
+      image:
+        description: Image data (bytes)
+        items:
+          type: integer
+        type: array
+      image_path:
+        description: Image URL or file reference
+        type: string
+      image_url:
+        description: Image URL or file reference
+        type: string
+      origin:
+        description: Origin of the plant
+        type: string
+      other_details:
+        additionalProperties: true
+        description: Additional details about the plant
+        type: object
       scientific_name:
         description: Scientific name of the plant
         type: string
@@ -104,7 +141,7 @@ paths:
         name: flora
         required: true
         schema:
-          $ref: '#/definitions/dto.FloraRequest'
+          $ref: '#/definitions/dto.FloraUpdateRequest'
       produces:
       - application/json
       responses:
