@@ -70,7 +70,8 @@ public class AuthService implements IAuthService {
             if (!authentication.isAuthenticated()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Credentials not found");
             }
-            String token = _jwtService.generateToken(user.getUsername());
+            Users userData = _usersRepository.findByUsername(user.getUsername());
+            String token = _jwtService.generateToken(userData);
             LoginResponseDTO response = new LoginResponseDTO(
                     token
             );

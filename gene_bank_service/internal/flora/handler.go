@@ -26,8 +26,8 @@ import (
 type FloraHandler interface {
 	GetFlora(c *fiber.Ctx) error
 	PostFlora(c *fiber.Ctx) error
+	PutFlora(c *fiber.Ctx) error
 	DeleteFlora(c *fiber.Ctx) error
-	// Add other methods as needed
 }
 
 // floraHandler is the concrete implementation of FloraHandler
@@ -50,13 +50,32 @@ func (h *floraHandler) GetFlora(c *fiber.Ctx) error {
 // @Tags Flora
 // @Accept json
 // @Produce json
-// @Param flora body FloraRequest true "Flora data"
+// @Param flora body dto.FloraRequest true "Flora data"
 // @Success 200 {object} common.SuccessResponse
 // @Failure 400 {object} common.ErrorResponse
 // @Failure 500 {object} common.ErrorResponse
 // @Router /flora [post]
 func (h *floraHandler) PostFlora(c *fiber.Ctx) error {
 	err := h.service.PostFlora(c)
+	log.Println(err)
+	if err != nil {
+		return err
+	}
+	return c.Status(200).JSON(common.SuccessResponse{Status: "Flora submitted successfully"})
+}
+
+// PutFlora handler for updating flora data
+// @Summary Update a flora data in the database
+// @Tags Flora
+// @Accept json
+// @Produce json
+// @Param flora body dto.FloraRequest true "Flora data"
+// @Success 200 {object} common.SuccessResponse
+// @Failure 400 {object} common.ErrorResponse
+// @Failure 500 {object} common.ErrorResponse
+// @Router /flora [put]
+func (h *floraHandler) PutFlora(c *fiber.Ctx) error {
+	err := h.service.PutFlora(c)
 	log.Println(err)
 	if err != nil {
 		return err
@@ -76,5 +95,6 @@ func FloraRouter(router fiber.Router, rmqHandlers *rabbitmq.Handler) {
 
 	router.Get("/", handler.GetFlora)
 	router.Post("/", handler.PostFlora)
+	router.Put("/", handler.PutFlora)
 	router.Delete("/", handler.DeleteFlora)
 }

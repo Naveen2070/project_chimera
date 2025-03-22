@@ -1,4 +1,4 @@
-import { Controller, Headers } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import {
   Ctx,
   MessagePattern,
@@ -6,7 +6,6 @@ import {
   RmqContext,
 } from '@nestjs/microservices';
 import { FloraUpstreamService } from './flora_upstream.service';
-import { UpdateFloraUpstreamDto } from './dto/update-flora_upstream.dto';
 import { RabbitMqPayload } from './dto/rabbit-payload';
 import { FloraUpstream } from './entities/flora_upstream.entity';
 
@@ -15,34 +14,55 @@ export class FloraUpstreamController {
   constructor(private readonly floraUpstreamService: FloraUpstreamService) {}
 
   @MessagePattern({ cmd: 'add_flora' })
-  create(
-    @Headers('X-Auth-User') headers,
-    @Payload() data: RabbitMqPayload,
-    @Ctx() context: RmqContext,
-  ) {
+  async create(@Payload() data: RabbitMqPayload, @Ctx() context: RmqContext) {
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
 
     const createFloraUpstreamDto: FloraUpstream = {
       common_name: data.CommonName,
       scientific_name: data.ScientificName,
-      user_id: 'aaaaaa',
+      user_id: data.UserId,
       type: data.Type,
       Image: data.Image,
       Description: data.Description,
       Origin: data.Origin,
       OtherDetails: data.OtherDetails,
     };
-    channel.ack(originalMsg);
-
-    return this.floraUpstreamService.create(createFloraUpstreamDto);
+    try {
+      await this.floraUpstreamService.create(createFloraUpstreamDto);
+    } catch (error) {
+      console.log(error);
+      channel.nack(originalMsg);
+    } finally {
+      channel.ack(originalMsg);
+    }
   }
 
-  @MessagePattern('updateFloraUpstream')
-  update(@Payload() updateFloraUpstreamDto: UpdateFloraUpstreamDto) {
-    return this.floraUpstreamService.update(
-      updateFloraUpstreamDto.id,
-      updateFloraUpstreamDto,
-    );
+  @MessagePattern({ cmd: 'update_flora' })
+  async update(@Payload() data: RabbitMqPayload, @Ctx() context: RmqContext) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    const updateFloraUpstreamDto: FloraUpstream = {
+      common_name: data.CommonName,
+      scientific_name: data.ScientificName,
+      user_id: data.UserId,
+      type: data.Type,
+      Image: data.Image,
+      Description: data.Description,
+      Origin: data.Origin,
+      OtherDetails: data.OtherDetails,
+    };
+    try {
+      await this.floraUpstreamService.update(
+        data.id as string,
+        updateFloraUpstreamDto,
+      );
+    } catch (error) {
+      console.log(error);
+      channel.nack(originalMsg);
+    } finally {
+      channel.ack(originalMsg);
+    }
   }
 }

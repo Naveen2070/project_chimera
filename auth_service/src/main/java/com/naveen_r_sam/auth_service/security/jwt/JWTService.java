@@ -1,5 +1,6 @@
 package com.naveen_r_sam.auth_service.security.jwt;
 
+import com.naveen_r_sam.auth_service.model.Users;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,11 +15,14 @@ public class JWTService {
     @Value("${jwt.secret}")
     public String secretKey;
 
-    public String generateToken(String userName) {
-        Map<String, Objects> claims = new HashMap<>();
+    public String generateToken(Users userData) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", userData.getId());
+        claims.put("role", userData.getRole());
+
         return Jwts.builder().claims()
                 .add(claims)
-                .subject(userName)
+                .subject(userData.getUsername())
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + 60 * 60 * 1000))
                 .and()

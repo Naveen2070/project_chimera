@@ -50,6 +50,49 @@ const docTemplate = `{
             }
         },
         "/flora": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Flora"
+                ],
+                "summary": "Update a flora data in the database",
+                "parameters": [
+                    {
+                        "description": "Flora data",
+                        "name": "flora",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.FloraRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/common.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "consumes": [
                     "application/json"
@@ -68,7 +111,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/flora.FloraRequest"
+                            "$ref": "#/definitions/dto.FloraRequest"
                         }
                     }
                 ],
@@ -112,7 +155,7 @@ const docTemplate = `{
                 }
             }
         },
-        "flora.FloraRequest": {
+        "dto.FloraRequest": {
             "type": "object",
             "properties": {
                 "common_name": {
@@ -142,15 +185,12 @@ const docTemplate = `{
                 "scientific_name": {
                     "description": "Scientific name of the plant",
                     "type": "string"
+                },
+                "type": {
+                    "description": "Type of post",
+                    "type": "string"
                 }
             }
-        }
-    },
-    "securityDefinitions": {
-        "ApiKeyAuth": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
         }
     }
 }`

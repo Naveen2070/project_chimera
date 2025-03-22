@@ -45,10 +45,6 @@ import (
 
 // @license.name  Apache 2.0
 // @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
-
-// @securityDefinitions.apikey ApiKeyAuth
-// @in header
-// @name Authorization
 func main() {
 	// Set up RabbitMQ client
 	rabbitURL := "amqp://admin:naveen@2007@localhost:5672"
@@ -113,6 +109,24 @@ func main() {
 				Description: "Gateway Server",
 			},
 		}
+
+		// add security info
+		openapi3Doc.Security = openapi3.SecurityRequirements{
+			{
+				"BearerAuth": []string{}, // Associates the BearerAuth with the endpoint
+			},
+		}
+		// Define SecuritySchemes
+		openapi3Doc.Components.SecuritySchemes = openapi3.SecuritySchemes{
+			"BearerAuth": &openapi3.SecuritySchemeRef{
+				Value: &openapi3.SecurityScheme{
+					Type:         "http",
+					Scheme:       "bearer",
+					BearerFormat: "JWT",
+				},
+			},
+		}
+
 		// Serve the OpenAPI 3.0 JSON response
 		return c.JSON(openapi3Doc)
 	})

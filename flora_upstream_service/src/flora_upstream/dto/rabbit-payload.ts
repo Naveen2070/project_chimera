@@ -9,4 +9,5 @@ export class RabbitMqPayload {
   Origin!: string; // Origin of the plant
   OtherDetails!: object; // Additional details about the plant
   Type!: $Enums.PostType; // Type of post
+  UserId!: string; // User ID
 }

@@ -1,6 +1,6 @@
 import { $Enums, Prisma } from '@prisma/client';
 
-export class CreateFloraUpstreamDto implements Prisma.FloraCreateInput {
+export class FloraPg implements Prisma.FloraCreateInput {
   id?: string | undefined;
   common_name!: string;
   scientific_name!: string;

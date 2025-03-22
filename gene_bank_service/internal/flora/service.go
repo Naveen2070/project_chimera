@@ -16,6 +16,7 @@ package flora
 
 import (
 	"fmt"
+	"project_chimera/gene_bank_service/internal/dto"
 	"project_chimera/gene_bank_service/internal/rabbitmq"
 	"project_chimera/gene_bank_service/pkg/utils"
 
@@ -26,6 +27,7 @@ import (
 type FloraService interface {
 	GetFlora(c *fiber.Ctx) error
 	PostFlora(c *fiber.Ctx) error
+	PutFlora(c *fiber.Ctx) error
 	DeleteFlora(c *fiber.Ctx) error
 }
 
@@ -45,7 +47,7 @@ func (s *floraService) GetFlora(c *fiber.Ctx) error {
 
 // PostFlora handler for adding flora data
 func (s *floraService) PostFlora(c *fiber.Ctx) error {
-	var payload FloraRequest
+	var payload dto.FloraRequest
 
 	if err := c.BodyParser(&payload); err != nil {
 		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "Invalid JSON"}
@@ -70,6 +72,12 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 		return &fiber.Error{Code: fiber.StatusInternalServerError, Message: fmt.Sprintf("Error fetching image: %v", err)}
 	}
 
+	userId := c.Get("X-Auth-UserId")
+
+	if userId == "" {
+		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "User ID not found in request"}
+	}
+
 	// Send Ack request
 	var data map[string]interface{}
 	data = map[string]interface{}{
@@ -80,8 +88,52 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 		"Origin":         payload.Origin,
 		"OtherDetails":   payload.OtherDetails,
 		"Type":           payload.Type,
+		"UserId":         userId,
 	}
 	err = s.rmqHandlers.SendAckRequest(data, "add_flora")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// PutFlora handler for updating flora data
+func (s *floraService) PutFlora(c *fiber.Ctx) error {
+	var payload dto.FloraUpdateRequest
+
+	if err := c.BodyParser(&payload); err != nil {
+		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "Invalid JSON"}
+	}
+
+	// Handle image conversion to byte array
+	var imageBytes []byte
+	var err error
+
+	if payload.ImageURL != "" {
+		// If the image is provided via a URL, fetch it
+		imageBytes, err = utils.FetchImageFromURL(payload.ImageURL)
+	} else if payload.ImagePath != "" {
+		// If the image is provided via a local path, read it
+		imageBytes, err = utils.FetchImageFromPath(payload.ImagePath)
+	} else {
+		// Handle case where there is no image provided
+		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "No image URL or path provided"}
+	}
+
+	if err != nil {
+		return &fiber.Error{Code: fiber.StatusInternalServerError, Message: fmt.Sprintf("Error fetching image: %v", err)}
+	}
+
+	userId := c.Get("X-Auth-UserId")
+
+	if userId == "" {
+		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "User ID not found in request"}
+	}
+
+	// Send Ack request
+	data := utils.CreateFloraDataMap(payload, userId, imageBytes)
+	err = s.rmqHandlers.SendAckRequest(data, "update_flora")
 	if err != nil {
 		return err
 	}

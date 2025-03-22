@@ -9,7 +9,7 @@ definitions:
       status:
         type: string
     type: object
-  flora.FloraRequest:
+  dto.FloraRequest:
     properties:
       common_name:
         description: Common name of the plant
@@ -31,6 +31,9 @@ definitions:
         type: string
       scientific_name:
         description: Scientific name of the plant
+        type: string
+      type:
+        description: Type of post
         type: string
     type: object
 info:
@@ -73,7 +76,7 @@ paths:
         name: flora
         required: true
         schema:
-          $ref: '#/definitions/flora.FloraRequest'
+          $ref: '#/definitions/dto.FloraRequest'
       produces:
       - application/json
       responses:
@@ -92,9 +95,32 @@ paths:
       summary: Add a flora data to the database
       tags:
       - Flora
-securityDefinitions:
-  ApiKeyAuth:
-    in: header
-    name: Authorization
-    type: apiKey
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Flora data
+        in: body
+        name: flora
+        required: true
+        schema:
+          $ref: '#/definitions/dto.FloraRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/common.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.ErrorResponse'
+      summary: Update a flora data in the database
+      tags:
+      - Flora
 swagger: "2.0"

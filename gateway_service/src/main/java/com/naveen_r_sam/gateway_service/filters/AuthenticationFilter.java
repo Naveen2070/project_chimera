@@ -79,8 +79,10 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                     .getPayload();
 
             String username = claims.getSubject();
+            String userId = (String) claims.get("userId");
+            String role = (String) claims.get("role");
 
-            if (username == null) {
+            if (username == null || userId == null || role == null) {
                 exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                 exchange.getResponse().getHeaders().add(HttpHeaders.CONTENT_TYPE,  MediaType.APPLICATION_JSON_VALUE);
 
@@ -105,18 +107,20 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             }
 
             // Mutate headers (if needed)
-            exchange.mutate().request(
-                    exchange.getRequest().mutate()
+            exchange = exchange.mutate()
+                    .request(exchange.getRequest().mutate()
                             .header("X-Auth-User", username)
-                            .build()
-            ).build();
+                            .header("X-Auth-UserId", userId)
+                            .header("X-Auth-Role", role)
+                            .build())
+                    .build();
 
         } catch (Exception e) {
             log.error("e: ", e);
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
-
+        
         return chain.filter(exchange);
     }
 

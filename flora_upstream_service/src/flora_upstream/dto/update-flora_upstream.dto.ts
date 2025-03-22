@@ -1,8 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { CreateFloraUpstreamDto } from './create-flora_upstream.dto';
+import { FloraPg } from './create-flora_upstream.dto';
 
-export class UpdateFloraUpstreamDto extends PartialType(
-  CreateFloraUpstreamDto,
-) {
+export class UpdateFloraUpstreamDto extends PartialType(FloraPg) {
   id!: string;
 }
