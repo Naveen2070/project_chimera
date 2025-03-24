@@ -34,10 +34,12 @@ type FloraService interface {
 // FloraService is the concrete implementation of FloraService
 type floraService struct {
 	rmqHandlers *rabbitmq.Handler
+
+	downStreamHandler *rabbitmq.Handler
 }
 
-func NewFloraService(rmqHandlers *rabbitmq.Handler) FloraService {
-	return &floraService{rmqHandlers: rmqHandlers}
+func NewFloraService(rmqHandlers *rabbitmq.Handler, downStreamHandler *rabbitmq.Handler) FloraService {
+	return &floraService{rmqHandlers: rmqHandlers, downStreamHandler: downStreamHandler}
 }
 
 // GetFlora handler for retrieving flora data
