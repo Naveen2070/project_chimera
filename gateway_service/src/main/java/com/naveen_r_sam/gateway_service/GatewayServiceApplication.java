@@ -46,6 +46,10 @@ public class GatewayServiceApplication {
 						.filters(f -> f
 								.stripPrefix(1))
 						.uri("lb://FLORA-UPSTREAM-SERVICE"))
+				.route("flora-downstream-service", r -> r.path("/flora-downstream/**")
+						.filters(f -> f
+								.stripPrefix(1))
+						.uri("lb://FLORA-DOWNSTREAM-SERVICE"))
 				.build();
 	}
 

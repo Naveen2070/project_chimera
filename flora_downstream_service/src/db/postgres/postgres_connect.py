@@ -8,7 +8,6 @@ import os
 
 # Load PostgreSQL connection URL from environment variables
 POSTGRES_URL = os.getenv("DATABASE_URL_POSTGRES")
-
 # Create the Database and Engine
 database = Database(POSTGRES_URL)
 async_engine = create_async_engine(POSTGRES_URL, echo=True)

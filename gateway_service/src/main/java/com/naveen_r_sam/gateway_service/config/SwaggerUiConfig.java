@@ -98,8 +98,9 @@ public class SwaggerUiConfig implements ApplicationListener<HeartbeatEvent> {
     private String resolveApiDocsUrl(String serviceName) {
         return switch (serviceName.toLowerCase()) {
             case "user" -> GATEWAY_URL + "/user/swagger/v1/swagger.json"; // .NET service
-            case "flora-upstream" -> GATEWAY_URL + "/flora-upstream/swagger/v1/swagger.json"; // .NET service
-            case "gene-bank" -> GATEWAY_URL + "/gene-bank/swagger/v1/swagger.json"; // .NET service
+            case "flora-upstream" -> GATEWAY_URL + "/flora-upstream/swagger/v1/swagger.json"; // NestJS service
+            case "gene-bank" -> GATEWAY_URL + "/gene-bank/swagger/v1/swagger.json"; // Golang service
+            case "flora-downstream" -> GATEWAY_URL + "/flora-downstream/swagger/v1//openapi.json"; // Spring service
             default -> GATEWAY_URL + "/" + serviceName + "/v3/api-docs"; // Spring services
         };
     }

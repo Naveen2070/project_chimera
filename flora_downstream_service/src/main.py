@@ -12,8 +12,8 @@ from src.flora.router import flora_router
 load_dotenv()
 
 CONSUL_HOST = os.getenv("CONSUL_HOST", "localhost")
-CONSUL_PORT = int(os.getenv("CONSUL_PORT", 8500))
-APP_PORT = int(os.getenv("APP_PORT", 6000))
+CONSUL_PORT = int(os.getenv("CONSUL_PORT"))
+APP_PORT = int(os.getenv("APP_PORT"))
 
 
 @asynccontextmanager
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
         address="localhost",
         port=APP_PORT,
     )
-    print(f"Service {service_id} registered with Consul!")
+    print(f"Service {service_id} in port {APP_PORT} registered with Consul!")
     await database.connect()
     print("Connected to Postgres database")
 
@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):
             print("Disconnected from MongoDB")
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, openapi_url="/swagger/v1/openapi.json")
 
 app.include_router(flora_router)
 

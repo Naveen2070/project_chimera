@@ -8,8 +8,8 @@ Base = declarative_base()
 
 
 class Type(en):
-    PUBLIC = "public"
-    PRIVATE = "private"
+    public = "public"
+    private = "private"
 
 
 class FloraPG(Base):
@@ -19,3 +19,10 @@ class FloraPG(Base):
     common_name = Column(String, unique=True, index=True)
     scientific_name = Column(String, unique=True, index=True)
     type = Column(Enum(Type), nullable=False)
+
+    def __repr__(self):
+        return (
+            f"FloraPG(id={self.id}, user_id={self.user_id}, "
+            f"common_name={self.common_name}, scientific_name={self.scientific_name}, "
+            f"type={self.type})"
+        )
