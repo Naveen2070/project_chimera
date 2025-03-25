@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rabbitmq/amqp091-go"
@@ -78,13 +79,28 @@ func (c *RabbitMQClient) SendRPCCommand(queueName string, cmd string, data inter
 
 	corrID := uuid.New().String()
 
-	// Listen for response messages
-	msgs, err := c.channel.Consume(
-		c.replyQueue.Name, "", true, false, false, false, nil,
-	)
-	if err != nil {
-		return nil, err
-	}
+	// Create a channel to receive responses
+	responseChan := make(chan []byte)
+
+	// Start a goroutine to listen for responses
+	go func() {
+		msgs, err := c.channel.Consume(
+			c.replyQueue.Name, "", true, false, false, false, nil,
+		)
+		if err != nil {
+			log.Printf("Failed to consume response: %v", err)
+			close(responseChan)
+			return
+		}
+
+		for msg := range msgs {
+			if msg.CorrelationId == corrID {
+				responseChan <- msg.Body
+				break
+			}
+		}
+		close(responseChan) // Close channel after receiving a response
+	}()
 
 	// Publish message with reply-to and correlation ID
 	err = c.channel.PublishWithContext(context.Background(),
@@ -103,21 +119,20 @@ func (c *RabbitMQClient) SendRPCCommand(queueName string, cmd string, data inter
 
 	log.Printf("Sent RPC command: %s with correlation ID: %s", string(body), corrID)
 
-	// Wait for response
-	for msg := range msgs {
-		log.Println("Received RPC response:", string(msg.CorrelationId))
-		if msg.CorrelationId == corrID {
-			var response interface{}
-			err := json.Unmarshal(msg.Body, &response)
-			if err != nil {
-				return nil, err
-			}
-			log.Println("Received RPC response:", response)
-			return response, nil
+	// Wait for response or timeout
+	select {
+	case responseBody := <-responseChan:
+		log.Println("Received RPC response:", string(responseBody))
+		var response interface{}
+		err := json.Unmarshal(responseBody, &response)
+		if err != nil {
+			return nil, err
 		}
+		log.Println("Parsed RPC response:", response)
+		return response, nil
+	case <-time.After(5 * time.Second): // Add timeout to prevent waiting indefinitely
+		return nil, errors.New("timeout waiting for RPC response")
 	}
-
-	return nil, errors.New("no response received")
 }
 
 // SendAckCommand sends a message without waiting for a response (Ack-based)

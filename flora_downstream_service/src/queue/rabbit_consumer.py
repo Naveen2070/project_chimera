@@ -1,6 +1,10 @@
 import asyncio
+import json
 from aio_pika import connect, Message, IncomingMessage
 from aio_pika.abc import AbstractConnection, AbstractChannel, AbstractQueue
+
+from src.flora.router import get_db, process_request
+from src.queue.message_decoder import RpcMessage
 
 
 class RpcConsumer:
@@ -28,40 +32,41 @@ class RpcConsumer:
 
     async def on_request(self, message: IncomingMessage) -> None:
         """
-        Handle incoming RPC requests, process them, and send a response to the `reply_to` queue.
+        Handle incoming RPC requests, process them, and route them to different processors based on the pattern field.
         :param message: The incoming message from the queue.
         """
         async with message.process():
-            print(f"Received request: {message.body.decode()}")
+            try:
+                # Parse the incoming JSON message body
+                request_data = RpcMessage.from_json(message.body.decode())
+                print(f"Received JSON request: {request_data}")
+                async for db in get_db():
+                    response_data = await process_request(
+                        cmd=request_data.pattern.cmd, db=db, data=request_data.data
+                    )
+                    break
 
-            # Process the incoming message to create a response
-            request_data = message.body.decode()
-            response_data = await self.process_request(request_data)
+                # Send response
+                if not message.reply_to:
+                    print("Error: `reply_to` queue not specified in the message")
+                    return
 
-            if not message.reply_to:
-                print("Error: `reply_to` queue not specified in the message")
-                return
+                await self.channel.default_exchange.publish(
+                    Message(
+                        body=json.dumps(response_data).encode(),
+                        content_type="application/json",
+                        correlation_id=message.correlation_id,
+                    ),
+                    routing_key=message.reply_to,
+                )
+                print(
+                    f"Sent response to {message.reply_to} with correlation_id: {message.correlation_id}"
+                )
 
-            await self.channel.default_exchange.publish(
-                Message(
-                    body=response_data.encode(),
-                    content_type="text/plain",
-                    correlation_id=message.correlation_id,
-                ),
-                routing_key=message.reply_to,
-            )
-            print(
-                f"Sent response to {message.reply_to} with correlation_id: {message.correlation_id}"
-            )
-
-    async def process_request(self, request_data: str) -> str:
-        """
-        Process the incoming request and generate a response.
-        This function should contain the business logic.
-        :param request_data: The incoming request data.
-        :return: The response data.
-        """
-        return f"Processed: {request_data}"
+            except json.JSONDecodeError:
+                print("Error: Failed to decode JSON message body")
+            except Exception as e:
+                print(f"Error: {e}")
 
     async def start(self) -> None:
         """

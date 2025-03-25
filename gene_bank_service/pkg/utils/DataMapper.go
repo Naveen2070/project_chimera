@@ -13,7 +13,11 @@
 //	limitations under the License.
 package utils
 
-import "project_chimera/gene_bank_service/internal/dto"
+import (
+	"encoding/base64"
+	"fmt"
+	"project_chimera/gene_bank_service/internal/dto"
+)
 
 func CreateFloraDataMap(payload dto.FloraUpdateRequest, userId string, imageBytes []byte) map[string]interface{} {
 	data := make(map[string]interface{})
@@ -48,4 +52,62 @@ func CreateFloraDataMap(payload dto.FloraUpdateRequest, userId string, imageByte
 	}
 
 	return data
+}
+
+func MapToFlora(data map[string]interface{}) (dto.Flora, error) {
+	var flora dto.Flora
+
+	// ID
+	if id, ok := data["id"].(string); ok {
+		flora.ID = id
+	}
+
+	// CommonName
+	if commonName, ok := data["common_name"].(string); ok {
+		flora.CommonName = commonName
+	}
+
+	// ScientificName
+	if scientificName, ok := data["scientific_name"].(string); ok {
+		flora.ScientificName = scientificName
+	}
+
+	// Image
+	if imageBase64, ok := data["image"].(string); ok {
+		image, err := base64.StdEncoding.DecodeString(imageBase64)
+		if err != nil {
+			return flora, fmt.Errorf("failed to decode image: %v", err)
+		}
+		flora.Image = image
+	}
+
+	// Description
+	if description, ok := data["description"].(string); ok {
+		flora.Description = description
+	}
+
+	// Origin
+	if origin, ok := data["origin"].(string); ok {
+		flora.Origin = origin
+	}
+
+	// OtherDetails
+	if otherDetails, ok := data["other_details"].(string); ok {
+		flora.OtherDetails = otherDetails
+	}
+
+	// Type
+	if typeData, ok := data["type"].(map[string]interface{}); ok {
+		var floraType dto.Type
+		if typeName, ok := typeData["name"].(string); ok {
+			if typeName == string(dto.Public) || typeName == string(dto.Private) {
+				floraType = dto.Type(typeName)
+			} else {
+				return flora, fmt.Errorf("invalid type name: expected 'public' or 'private', got '%s'", typeName)
+			}
+		}
+		flora.Type = floraType
+	}
+
+	return flora, nil
 }

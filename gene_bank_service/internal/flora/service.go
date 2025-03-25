@@ -44,17 +44,29 @@ func NewFloraService(upStreamHandler *rabbitmq.Handler, downStreamHandler *rabbi
 
 // GetFlora handler for retrieving flora data
 func (s *floraService) GetFlora(c *fiber.Ctx) (dto.FloraResponse, error) {
-	res, err := s.downStreamHandler.SendRequest(c, "get_flora", "")
-
+	res, err := s.downStreamHandler.SendRequest(c, "get_all_floras", "")
 	if err != nil {
 		return dto.FloraResponse{}, err
 	}
 
+	// Ensure res is a slice of map[string]interface{}
+	rawDataList, ok := res.([]map[string]interface{})
+	if !ok {
+		return dto.FloraResponse{}, fmt.Errorf("invalid format: expected []map[string]interface{}, got %T", res)
+	}
+
 	var floraResponse dto.FloraResponse
-	var floraList []dto.Flora = res.([]dto.Flora)
+	var floraList []dto.Flora
+
+	for _, rawData := range rawDataList {
+		flora, err := utils.MapToFlora(rawData)
+		if err != nil {
+			return dto.FloraResponse{}, fmt.Errorf("failed to map data to Flora: %v", err)
+		}
+		floraList = append(floraList, flora)
+	}
 
 	floraResponse.Flora = floraList
-
 	return floraResponse, nil
 }
 

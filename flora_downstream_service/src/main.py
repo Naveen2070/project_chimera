@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 import os
 from src.db.postgres.postgres_connect import database
 from src.db.mongo.mongo_connect import mongo_client
-from src.flora.router import flora_router
 from src.queue.rabbit_consumer import RpcConsumer
 
 # Load environment variables
@@ -58,8 +57,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan, openapi_url="/swagger/v1/openapi.json")
-
-app.include_router(flora_router)
 
 if __name__ == "__main__":
     import uvicorn

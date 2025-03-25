@@ -27,10 +27,8 @@ type Flora struct {
 type Type string
 
 const (
-	Tree   Type = "tree"
-	Shrub  Type = "shrub"
-	Flower Type = "flower"
-	Fern   Type = "fern"
+	Public  Type = "public"
+	Private Type = "private"
 )
 
 type FloraResponse struct {
