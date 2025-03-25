@@ -35,16 +35,12 @@ func NewQueueHandler(rpcClient *RabbitMQClient, queueName string) *Handler {
 }
 
 // SendRequest handles HTTP requests and sends a RPC command to RabbitMQ
-func (h *Handler) SendRequest(c *fiber.Ctx, cmd string) (interface{}, error) {
-	var data map[string]interface{}
-
-	if err := c.BodyParser(&data); err != nil {
-		return nil, &fiber.Error{Code: fiber.StatusBadRequest, Message: "Invalid JSON"}
-	}
+func (h *Handler) SendRequest(c *fiber.Ctx, cmd string, param string) (interface{}, error) {
+	var data = map[string]interface{}{"param": param}
 
 	response, err := h.rpcClient.SendRPCCommand(h.queueName, cmd, data)
 	if err != nil {
-		return nil, &fiber.Error{Code: fiber.StatusInternalServerError, Message: "Failed to send command"}
+		return nil, &fiber.Error{Code: fiber.StatusInternalServerError, Message: "Command failed with error: " + err.Error()}
 	}
 
 	return response, nil

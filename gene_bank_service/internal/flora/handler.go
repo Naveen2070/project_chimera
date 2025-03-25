@@ -41,8 +41,21 @@ func NewFloraHandler(service FloraService) FloraHandler {
 }
 
 // GetFlora handler for retrieving flora data
+// @Summary Retrieve flora data from the database
+// @Tags Flora
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.FloraResponse
+// @Failure 500 {object} common.ErrorResponse
+// @Router /flora [get]
 func (h *floraHandler) GetFlora(c *fiber.Ctx) error {
-	return nil
+	res, err := h.service.GetFlora(c)
+
+	if err != nil {
+		return err
+	}
+
+	return c.Status(200).JSON(res)
 }
 
 // PostFlora handler for adding flora data
@@ -89,8 +102,8 @@ func (h *floraHandler) DeleteFlora(c *fiber.Ctx) error {
 }
 
 // FloraRouter sets up the routes for flora endpoints
-func FloraRouter(router fiber.Router, rmqHandlers *rabbitmq.Handler, downStreamHandler *rabbitmq.Handler) {
-	service := NewFloraService(rmqHandlers, downStreamHandler)
+func FloraRouter(router fiber.Router, upStreamHandler *rabbitmq.Handler, downStreamHandler *rabbitmq.Handler) {
+	service := NewFloraService(upStreamHandler, downStreamHandler)
 	handler := NewFloraHandler(service)
 
 	router.Get("/", handler.GetFlora)

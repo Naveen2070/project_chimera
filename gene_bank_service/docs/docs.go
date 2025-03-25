@@ -50,6 +50,32 @@ const docTemplate = `{
             }
         },
         "/flora": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Flora"
+                ],
+                "summary": "Retrieve flora data from the database",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.FloraResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "put": {
                 "consumes": [
                     "application/json"
@@ -155,6 +181,50 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.Flora": {
+            "type": "object",
+            "properties": {
+                "common_name": {
+                    "description": "Common name of the plant",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "Description of the plant",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "Unique identifier for the plant",
+                    "type": "string"
+                },
+                "image": {
+                    "description": "Image data (bytes)",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "origin": {
+                    "description": "Origin of the plant",
+                    "type": "string"
+                },
+                "other_details": {
+                    "description": "Additional details about the plant",
+                    "type": "string"
+                },
+                "scientific_name": {
+                    "description": "Scientific name of the plant",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "Type of post",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.Type"
+                        }
+                    ]
+                }
+            }
+        },
         "dto.FloraRequest": {
             "type": "object",
             "properties": {
@@ -190,6 +260,17 @@ const docTemplate = `{
                 "type": {
                     "description": "Type of post",
                     "type": "string"
+                }
+            }
+        },
+        "dto.FloraResponse": {
+            "type": "object",
+            "properties": {
+                "flora": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.Flora"
+                    }
                 }
             }
         },
@@ -241,6 +322,21 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "dto.Type": {
+            "type": "string",
+            "enum": [
+                "tree",
+                "shrub",
+                "flower",
+                "fern"
+            ],
+            "x-enum-varnames": [
+                "Tree",
+                "Shrub",
+                "Flower",
+                "Fern"
+            ]
         }
     }
 }`

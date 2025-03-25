@@ -21,8 +21,17 @@ type Flora struct {
 	Description    string `json:"description,omitempty"`     // Description of the plant
 	Origin         string `json:"origin,omitempty"`          // Origin of the plant
 	OtherDetails   string `json:"other_details,omitempty"`   // Additional details about the plant
-	Type           string `json:"type,omitempty"`            // Type of post
+	Type           Type   `json:"type,omitempty"`            // Type of post
 }
+
+type Type string
+
+const (
+	Tree   Type = "tree"
+	Shrub  Type = "shrub"
+	Flower Type = "flower"
+	Fern   Type = "fern"
+)
 
 type FloraResponse struct {
 	Flora []Flora `json:"flora,omitempty"`

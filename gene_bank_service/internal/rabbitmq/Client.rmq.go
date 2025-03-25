@@ -65,7 +65,9 @@ func NewRabbitMQClient(rabbitURL string) (*RabbitMQClient, error) {
 // SendRPCCommand sends a command and waits for a response (RPC pattern)
 func (c *RabbitMQClient) SendRPCCommand(queueName string, cmd string, data interface{}) (interface{}, error) {
 	message := map[string]interface{}{
-		"cmd":  cmd,
+		"pattern": map[string]string{
+			"cmd": cmd,
+		},
 		"data": data,
 	}
 
@@ -99,16 +101,18 @@ func (c *RabbitMQClient) SendRPCCommand(queueName string, cmd string, data inter
 		return nil, err
 	}
 
-	log.Println("Sent RPC command:", string(body))
+	log.Printf("Sent RPC command: %s with correlation ID: %s", string(body), corrID)
 
 	// Wait for response
 	for msg := range msgs {
+		log.Println("Received RPC response:", string(msg.CorrelationId))
 		if msg.CorrelationId == corrID {
 			var response interface{}
 			err := json.Unmarshal(msg.Body, &response)
 			if err != nil {
 				return nil, err
 			}
+			log.Println("Received RPC response:", response)
 			return response, nil
 		}
 	}

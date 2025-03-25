@@ -25,7 +25,7 @@ import (
 
 // FloraService defines the interface for flora services
 type FloraService interface {
-	GetFlora(c *fiber.Ctx) error
+	GetFlora(c *fiber.Ctx) (dto.FloraResponse, error)
 	PostFlora(c *fiber.Ctx) error
 	PutFlora(c *fiber.Ctx) error
 	DeleteFlora(c *fiber.Ctx) error
@@ -33,18 +33,29 @@ type FloraService interface {
 
 // FloraService is the concrete implementation of FloraService
 type floraService struct {
-	rmqHandlers *rabbitmq.Handler
+	upStreamHandler *rabbitmq.Handler
 
 	downStreamHandler *rabbitmq.Handler
 }
 
-func NewFloraService(rmqHandlers *rabbitmq.Handler, downStreamHandler *rabbitmq.Handler) FloraService {
-	return &floraService{rmqHandlers: rmqHandlers, downStreamHandler: downStreamHandler}
+func NewFloraService(upStreamHandler *rabbitmq.Handler, downStreamHandler *rabbitmq.Handler) FloraService {
+	return &floraService{upStreamHandler: upStreamHandler, downStreamHandler: downStreamHandler}
 }
 
 // GetFlora handler for retrieving flora data
-func (s *floraService) GetFlora(c *fiber.Ctx) error {
-	return nil
+func (s *floraService) GetFlora(c *fiber.Ctx) (dto.FloraResponse, error) {
+	res, err := s.downStreamHandler.SendRequest(c, "get_flora", "")
+
+	if err != nil {
+		return dto.FloraResponse{}, err
+	}
+
+	var floraResponse dto.FloraResponse
+	var floraList []dto.Flora = res.([]dto.Flora)
+
+	floraResponse.Flora = floraList
+
+	return floraResponse, nil
 }
 
 // PostFlora handler for adding flora data
@@ -81,8 +92,7 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 	}
 
 	// Send Ack request
-	var data map[string]interface{}
-	data = map[string]interface{}{
+	var data map[string]interface{} = map[string]interface{}{
 		"CommonName":     payload.CommonName,
 		"ScientificName": payload.ScientificName,
 		"Image":          imageBytes,
@@ -92,7 +102,7 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 		"Type":           payload.Type,
 		"UserId":         userId,
 	}
-	err = s.rmqHandlers.SendAckRequest(data, "add_flora")
+	err = s.upStreamHandler.SendAckRequest(data, "add_flora")
 	if err != nil {
 		return err
 	}
@@ -137,7 +147,7 @@ func (s *floraService) PutFlora(c *fiber.Ctx) error {
 
 	// Send Ack request
 	data := utils.CreateFloraDataMap(payload, userId, imageBytes)
-	err = s.rmqHandlers.SendAckRequest(data, "update_flora")
+	err = s.upStreamHandler.SendAckRequest(data, "update_flora")
 	if err != nil {
 		return err
 	}
