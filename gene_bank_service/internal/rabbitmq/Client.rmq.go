@@ -20,6 +20,7 @@ import (
 	"errors"
 	"log"
 	"project_chimera/gene_bank_service/pkg/common"
+	"project_chimera/gene_bank_service/pkg/utils"
 	"sync"
 	"time"
 
@@ -131,23 +132,42 @@ func (c *RabbitMQClient) SendRPCCommand(queueName string, cmd string, data inter
 	select {
 	case responseBody := <-responseChan:
 		log.Println("Received RPC response successfully")
+
 		var response map[string]interface{}
 		if err := json.Unmarshal(responseBody, &response); err != nil {
 			log.Printf("Failed to parse RPC response: %v", err)
 			return common.MessageResponse{}, err
 		}
 		log.Println("Parsed RPC response successfully")
+
 		status, ok := response["status"].(string)
 		if !ok {
 			return common.MessageResponse{}, errors.New("status not found in RPC response")
 		}
-		data, ok := response["data"].([]interface{})
+
+		var code int
+		parsedCode, ok := response["code"].(float64)
 		if !ok {
-			log.Printf("Data not found in RPC response: %v", response["data"])
+			return common.MessageResponse{}, errors.New("code not found in RPC response")
+		}
+		code = int(parsedCode)
+
+		var data []interface{}
+		if code != utils.SUCCESS {
+			if msg, ok := response["data"].(string); ok {
+				data = []interface{}{msg}
+			} else {
+				return common.MessageResponse{}, errors.New("data not found in RPC response")
+			}
+		} else if dataIface, ok := response["data"].([]interface{}); ok {
+			data = dataIface
+		} else {
 			return common.MessageResponse{}, errors.New("data not found in RPC response")
 		}
+
 		return common.MessageResponse{
 			Status: status,
+			Code:   code,
 			Data:   data,
 		}, nil
 	case <-time.After(10 * time.Second): // Timeout

@@ -53,7 +53,9 @@ class RpcConsumer:
 
                 await self.channel.default_exchange.publish(
                     Message(
-                        body=json.dumps(response_data).encode(),
+                        body=json.dumps(
+                            response_data, default=lambda o: o.to_dict()
+                        ).encode(),
                         content_type="application/json",
                         correlation_id=message.correlation_id,
                     ),

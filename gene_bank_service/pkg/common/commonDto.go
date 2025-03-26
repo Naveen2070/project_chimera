@@ -30,6 +30,7 @@ type MessageRequest struct {
 
 type MessageResponse struct {
 	Status string        `json:"status"`
+	Code   int           `json:"code"`
 	Data   []interface{} `json:"data"`
 }
 

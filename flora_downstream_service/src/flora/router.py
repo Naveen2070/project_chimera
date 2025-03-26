@@ -2,6 +2,7 @@ from fastapi import HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.postgres.postgres_connect import SessionLocal
 from src.flora.service import get_floras, get_flora
+from src.model.common import ApiResponse
 from src.model.flora import Flora
 
 
@@ -12,7 +13,7 @@ async def get_db():
 
 
 # Handler for processing requests based on the command
-async def process_request(cmd: str, db: AsyncSession, data: dict = None) -> dict:
+async def process_request(cmd: str, db: AsyncSession, data: dict = None) -> ApiResponse:
     """
     Process the incoming request based on the command and route it to appropriate handlers.
     :param cmd: The command indicating the action to perform.
@@ -23,18 +24,31 @@ async def process_request(cmd: str, db: AsyncSession, data: dict = None) -> dict
     try:
         if cmd == "get_all_floras":
             res = await get_floras(db)
-            return {"status": "success", "data": res or []}
+
+            if res.code == 200:
+                return ApiResponse(status="success", code=res.code, data=res.data)
+            else:
+                return ApiResponse(status="error", code=res.code, data=res.data)
+
         elif cmd == "get_flora_by_id":
             flora_id = data.get("param")
             if not flora_id:
-                return {"status": "error", "message": "flora_id is required"}
+                return ApiResponse(
+                    status="error", code=400, data="Flora ID not provided"
+                )
+
             res = await get_flora(flora_id, db)
-            return {"status": "success", "data": res or []}
+
+            if res.code == 200:
+                return ApiResponse(status="success", code=res.code, data=res.data)
+            else:
+                return ApiResponse(status="error", code=res.code, data=res.data)
+
         else:
-            return {"status": "error", "message": f"Unknown command: {cmd}"}
+            return ApiResponse(status="error", code=400, data="Invalid command")
     except Exception as e:
         print(e)
-        return {"status": "error", "message": "Internal Server Error"}
+        return ApiResponse(status="error", code=500, data="Internal Server Error")
 
 
 # Example handlers
@@ -46,10 +60,10 @@ async def get_all_floras(db: AsyncSession = Depends(get_db)):
     """
     try:
         res = await get_floras(db)
-        return res or []
+        return res
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        return ApiResponse(status="error", code=500, data=f"Internal Server Error {e}")
 
 
 async def get_flora_by_id(flora_id: str, db: AsyncSession = Depends(get_db)):
@@ -63,4 +77,4 @@ async def get_flora_by_id(flora_id: str, db: AsyncSession = Depends(get_db)):
         return await get_flora(flora_id, db)
     except Exception as e:
         print(e + "from get_flora_by_id", flora_id)
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise ApiResponse(status="error", code=500, data=f"Internal Server Error {e}")
