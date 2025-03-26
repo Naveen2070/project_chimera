@@ -15,7 +15,10 @@
 package flora
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"project_chimera/gene_bank_service/internal/dto"
 	"project_chimera/gene_bank_service/internal/rabbitmq"
 	"project_chimera/gene_bank_service/pkg/utils"
@@ -26,6 +29,7 @@ import (
 // FloraService defines the interface for flora services
 type FloraService interface {
 	GetFlora(c *fiber.Ctx) (dto.FloraResponse, error)
+	GetFloraById(c *fiber.Ctx) (dto.FloraResponse, error)
 	PostFlora(c *fiber.Ctx) error
 	PutFlora(c *fiber.Ctx) error
 	DeleteFlora(c *fiber.Ctx) error
@@ -44,28 +48,85 @@ func NewFloraService(upStreamHandler *rabbitmq.Handler, downStreamHandler *rabbi
 
 // GetFlora handler for retrieving flora data
 func (s *floraService) GetFlora(c *fiber.Ctx) (dto.FloraResponse, error) {
+	// Send downstream request
 	res, err := s.downStreamHandler.SendRequest(c, "get_all_floras", "")
 	if err != nil {
+		log.Printf("Error in SendRequest: %v", err)
 		return dto.FloraResponse{}, err
 	}
 
-	// Ensure res is a slice of map[string]interface{}
-	rawDataList, ok := res.([]map[string]interface{})
-	if !ok {
-		return dto.FloraResponse{}, fmt.Errorf("invalid format: expected []map[string]interface{}, got %T", res)
-	}
+	// Extract the data from the response
+	rawDataList := res.Data
 
+	// Prepare the response
 	var floraResponse dto.FloraResponse
-	var floraList []dto.Flora
+	var floraList []dto.FloraData
 
-	for _, rawData := range rawDataList {
-		flora, err := utils.MapToFlora(rawData)
-		if err != nil {
-			return dto.FloraResponse{}, fmt.Errorf("failed to map data to Flora: %v", err)
+	// Process each item in rawDataList
+	for _, item := range rawDataList {
+		// Check if the item is a string (JSON-encoded string)
+		if itemStr, ok := item.(string); ok {
+			// Parse the string into the FloraData struct
+			var floraData dto.FloraData
+			err := json.Unmarshal([]byte(itemStr), &floraData) // Convert JSON string to struct
+			if err != nil {
+				log.Printf("Error unmarshaling JSON string to FloraData: %v", err)
+				return dto.FloraResponse{}, fmt.Errorf("failed to map JSON string to FloraData: %v", err)
+			}
+
+			// Append valid FloraData to the list
+			floraList = append(floraList, floraData)
+			continue
 		}
-		floraList = append(floraList, flora)
+
+		// Handle unexpected data type
+		log.Printf("Unexpected item type in data: %T, Value: %v", item, item)
+		return dto.FloraResponse{}, errors.New("invalid item type in RPC response data")
 	}
 
+	// Assign the list to the response
+	floraResponse.Flora = floraList
+	return floraResponse, nil
+}
+
+func (s *floraService) GetFloraById(c *fiber.Ctx) (dto.FloraResponse, error) {
+	// Send downstream request
+	res, err := s.downStreamHandler.SendRequest(c, "get_flora_by_id", c.Params("id"))
+	if err != nil {
+		log.Printf("Error in SendRequest: %v", err)
+		return dto.FloraResponse{}, err
+	}
+
+	// Extract the data from the response
+	rawDataList := res.Data
+
+	// Prepare the response
+	var floraResponse dto.FloraResponse
+	var floraList []dto.FloraData
+
+	// Process each item in rawDataList
+	for _, item := range rawDataList {
+		// Check if the item is a string (JSON-encoded string)
+		if itemStr, ok := item.(string); ok {
+			// Parse the string into the FloraData struct
+			var floraData dto.FloraData
+			err := json.Unmarshal([]byte(itemStr), &floraData) // Convert JSON string to struct
+			if err != nil {
+				log.Printf("Error unmarshaling JSON string to FloraData: %v", err)
+				return dto.FloraResponse{}, fmt.Errorf("failed to map JSON string to FloraData: %v", err)
+			}
+
+			// Append valid FloraData to the list
+			floraList = append(floraList, floraData)
+			continue
+		}
+
+		// Handle unexpected data type
+		log.Printf("Unexpected item type in data: %T, Value: %v", item, item)
+		return dto.FloraResponse{}, errors.New("invalid item type in RPC response data")
+	}
+
+	// Assign the list to the response
 	floraResponse.Flora = floraList
 	return floraResponse, nil
 }

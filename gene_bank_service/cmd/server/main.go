@@ -57,6 +57,10 @@ func main() {
 	}
 	defer rpcClient.Close()
 
+	//start consumer for flora_upstream_queue
+	rpcClient.StartConsumer()
+	log.Println("RabbitMQ consumer started successfully!")
+
 	// Create queue handler
 	FloraUpstreamQueueHandler := rabbitmq.NewQueueHandler(rpcClient, folraQueueName)
 	floraDownstreamQueueHandler := rabbitmq.NewQueueHandler(rpcClient, floraDownstreamQueueName)

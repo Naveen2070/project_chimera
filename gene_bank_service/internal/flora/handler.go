@@ -25,6 +25,7 @@ import (
 // FloraHandler defines the interface for flora handlers
 type FloraHandler interface {
 	GetFlora(c *fiber.Ctx) error
+	GetFloraById(c *fiber.Ctx) error
 	PostFlora(c *fiber.Ctx) error
 	PutFlora(c *fiber.Ctx) error
 	DeleteFlora(c *fiber.Ctx) error
@@ -50,6 +51,25 @@ func NewFloraHandler(service FloraService) FloraHandler {
 // @Router /flora [get]
 func (h *floraHandler) GetFlora(c *fiber.Ctx) error {
 	res, err := h.service.GetFlora(c)
+
+	if err != nil {
+		return err
+	}
+
+	return c.Status(200).JSON(res)
+}
+
+// GetFloraById handler for retrieving flora data by ID
+// @Summary Retrieve flora data by ID from the database
+// @Tags Flora
+// @Accept json
+// @Produce json
+// @Param id path string true "Flora ID"
+// @Success 200 {object} dto.FloraResponse
+// @Failure 500 {object} common.ErrorResponse
+// @Router /flora/{id} [get]
+func (h *floraHandler) GetFloraById(c *fiber.Ctx) error {
+	res, err := h.service.GetFloraById(c)
 
 	if err != nil {
 		return err
@@ -107,6 +127,7 @@ func FloraRouter(router fiber.Router, upStreamHandler *rabbitmq.Handler, downStr
 	handler := NewFloraHandler(service)
 
 	router.Get("/", handler.GetFlora)
+	router.Get("/:id", handler.GetFloraById)
 	router.Post("/", handler.PostFlora)
 	router.Put("/", handler.PutFlora)
 	router.Delete("/", handler.DeleteFlora)

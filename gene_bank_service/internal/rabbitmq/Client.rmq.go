@@ -19,6 +19,8 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"project_chimera/gene_bank_service/pkg/common"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,9 +29,10 @@ import (
 
 // RabbitMQClient handles both RPC and Ack-based messaging
 type RabbitMQClient struct {
-	conn       *amqp091.Connection
-	channel    *amqp091.Channel
-	replyQueue amqp091.Queue
+	conn        *amqp091.Connection
+	channel     *amqp091.Channel
+	replyQueue  amqp091.Queue
+	responseMap sync.Map
 }
 
 // NewRabbitMQClient initializes the RabbitMQ connection
@@ -63,46 +66,50 @@ func NewRabbitMQClient(rabbitURL string) (*RabbitMQClient, error) {
 	}, nil
 }
 
-// SendRPCCommand sends a command and waits for a response (RPC pattern)
-func (c *RabbitMQClient) SendRPCCommand(queueName string, cmd string, data interface{}) (interface{}, error) {
-	message := map[string]interface{}{
-		"pattern": map[string]string{
-			"cmd": cmd,
-		},
-		"data": data,
-	}
-
-	body, err := json.Marshal(message)
-	if err != nil {
-		return nil, err
-	}
-
-	corrID := uuid.New().String()
-
-	// Create a channel to receive responses
-	responseChan := make(chan []byte)
-
-	// Start a goroutine to listen for responses
+// StartConsumer listens for responses in the background
+func (c *RabbitMQClient) StartConsumer() {
 	go func() {
 		msgs, err := c.channel.Consume(
-			c.replyQueue.Name, "", true, false, false, false, nil,
+			c.replyQueue.Name, "", false, false, false, false, nil, // Manual ACK
 		)
 		if err != nil {
-			log.Printf("Failed to consume response: %v", err)
-			close(responseChan)
+			log.Fatalf("Failed to start consumer: %v", err)
 			return
 		}
 
 		for msg := range msgs {
-			if msg.CorrelationId == corrID {
-				responseChan <- msg.Body
-				break
+			if ch, ok := c.responseMap.Load(msg.CorrelationId); ok {
+				responseChan := ch.(chan []byte)
+				responseChan <- msg.Body                // Send response to the corresponding request
+				close(responseChan)                     // Close channel after sending response
+				c.responseMap.Delete(msg.CorrelationId) // Remove from map
+				msg.Ack(false)                          // ✅ Manually acknowledge message
 			}
 		}
-		close(responseChan) // Close channel after receiving a response
 	}()
+}
 
-	// Publish message with reply-to and correlation ID
+// SendRPCCommand sends an RPC request and waits for the response
+func (c *RabbitMQClient) SendRPCCommand(queueName string, cmd string, data interface{}) (common.MessageResponse, error) {
+	message := common.MessageRequest{
+		Pattern: common.Pattern{
+			Cmd: cmd,
+		},
+		Data: data,
+	}
+
+	body, err := json.Marshal(message)
+	if err != nil {
+		return common.MessageResponse{}, err
+	}
+
+	corrID := uuid.New().String()
+	responseChan := make(chan []byte, 1) // Buffered to prevent blocking
+
+	// Store response channel in map
+	c.responseMap.Store(corrID, responseChan)
+
+	// Publish message
 	err = c.channel.PublishWithContext(context.Background(),
 		"", queueName, false, false,
 		amqp091.Publishing{
@@ -114,7 +121,8 @@ func (c *RabbitMQClient) SendRPCCommand(queueName string, cmd string, data inter
 
 	if err != nil {
 		log.Printf("Failed to publish RPC command: %v", err)
-		return nil, err
+		c.responseMap.Delete(corrID) // Clean up if publish fails
+		return common.MessageResponse{}, err
 	}
 
 	log.Printf("Sent RPC command: %s with correlation ID: %s", string(body), corrID)
@@ -122,16 +130,29 @@ func (c *RabbitMQClient) SendRPCCommand(queueName string, cmd string, data inter
 	// Wait for response or timeout
 	select {
 	case responseBody := <-responseChan:
-		log.Println("Received RPC response:", string(responseBody))
-		var response interface{}
-		err := json.Unmarshal(responseBody, &response)
-		if err != nil {
-			return nil, err
+		log.Println("Received RPC response successfully")
+		var response map[string]interface{}
+		if err := json.Unmarshal(responseBody, &response); err != nil {
+			log.Printf("Failed to parse RPC response: %v", err)
+			return common.MessageResponse{}, err
 		}
-		log.Println("Parsed RPC response:", response)
-		return response, nil
-	case <-time.After(5 * time.Second): // Add timeout to prevent waiting indefinitely
-		return nil, errors.New("timeout waiting for RPC response")
+		log.Println("Parsed RPC response successfully")
+		status, ok := response["status"].(string)
+		if !ok {
+			return common.MessageResponse{}, errors.New("status not found in RPC response")
+		}
+		data, ok := response["data"].([]interface{})
+		if !ok {
+			log.Printf("Data not found in RPC response: %v", response["data"])
+			return common.MessageResponse{}, errors.New("data not found in RPC response")
+		}
+		return common.MessageResponse{
+			Status: status,
+			Data:   data,
+		}, nil
+	case <-time.After(10 * time.Second): // Timeout
+		c.responseMap.Delete(corrID) // Clean up if timeout
+		return common.MessageResponse{}, errors.New("timeout waiting for RPC response")
 	}
 }
 

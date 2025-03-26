@@ -21,3 +21,19 @@ type SuccessResponse struct {
 type ErrorResponse struct {
 	Error string `json:"error"`
 }
+
+// Define the top-level structure for the message
+type MessageRequest struct {
+	Pattern Pattern     `json:"pattern"`
+	Data    interface{} `json:"data"`
+}
+
+type MessageResponse struct {
+	Status string        `json:"status"`
+	Data   []interface{} `json:"data"`
+}
+
+// Define the "Pattern" structure
+type Pattern struct {
+	Cmd string `json:"cmd"`
+}

@@ -1,3 +1,4 @@
+import base64
 from typing import Any, Dict
 from pydantic import BaseModel
 from enum import Enum
@@ -16,6 +17,12 @@ class Flora(BaseModel):
     description: str
     origin: str
     other_details: Dict[str, Any]
+
+    class Config:
+        json_encoders = {
+            Type: lambda t: t.value,
+            bytes: lambda b: base64.b64encode(b).decode("utf-8"),
+        }
 
     def __repr__(self):
         return (

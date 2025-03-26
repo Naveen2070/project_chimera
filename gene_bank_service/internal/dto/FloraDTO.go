@@ -14,14 +14,26 @@
 package dto
 
 type Flora struct {
-	ID             string `json:"id,omitempty"`              // Unique identifier for the plant
-	CommonName     string `json:"common_name,omitempty"`     // Common name of the plant
-	ScientificName string `json:"scientific_name,omitempty"` // Scientific name of the plant
-	Image          []byte `json:"image,omitempty"`           // Image data (bytes)
-	Description    string `json:"description,omitempty"`     // Description of the plant
-	Origin         string `json:"origin,omitempty"`          // Origin of the plant
-	OtherDetails   string `json:"other_details,omitempty"`   // Additional details about the plant
-	Type           Type   `json:"type,omitempty"`            // Type of post
+	ID             string                 `json:"id,omitempty"`              // Unique identifier for the plant
+	CommonName     string                 `json:"common_name,omitempty"`     // Common name of the plant
+	ScientificName string                 `json:"scientific_name,omitempty"` // Scientific name of the plant
+	Image          []byte                 `json:"image,omitempty"`           // Image data (bytes)
+	Description    string                 `json:"description,omitempty"`     // Description of the plant
+	Origin         string                 `json:"origin,omitempty"`          // Origin of the plant
+	OtherDetails   map[string]interface{} `json:"other_details,omitempty"`   // Additional details about the plant
+	Type           Type                   `json:"type,omitempty"`            // Type of post
+}
+
+type FloraData struct {
+	ID             string                 `json:"id"`              // Unique identifier
+	UserID         string                 `json:"user_id"`         // User associated with this flora
+	CommonName     string                 `json:"common_name"`     // Common name of the plant
+	ScientificName string                 `json:"scientific_name"` // Scientific name of the plant
+	Type           string                 `json:"type"`            // Type of flora (e.g., public/private)
+	Image          string                 `json:"image"`           // Base64-encoded image
+	Description    string                 `json:"description"`     // Description of the plant
+	Origin         string                 `json:"origin"`          // Geographical origin
+	OtherDetails   map[string]interface{} `json:"other_details"`   // Additional details as key-value pairs
 }
 
 type Type string
@@ -32,7 +44,7 @@ const (
 )
 
 type FloraResponse struct {
-	Flora []Flora `json:"flora,omitempty"`
+	Flora []FloraData `json:"flora,omitempty"`
 }
 
 type FloraRequest struct {

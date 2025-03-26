@@ -92,7 +92,7 @@ func MapToFlora(data map[string]interface{}) (dto.Flora, error) {
 	}
 
 	// OtherDetails
-	if otherDetails, ok := data["other_details"].(string); ok {
+	if otherDetails, ok := data["other_details"].(map[string]interface{}); ok {
 		flora.OtherDetails = otherDetails
 	}
 

@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import uuid
 from bson import Binary
 import bson
@@ -12,17 +13,18 @@ from src.model.mongo_flora import FloraMongo
 from src.model.postgres_flora import FloraPG
 
 
-async def get_floras(db: AsyncSession) -> list[Flora] | None:
-    result = await db.execute(select(FloraPG))  # Correct async query
-    florasPg: list[FloraPG] = result.scalars().all()  # Extract result
-    if florasPg is None:
+async def get_floras(db: AsyncSession) -> list[Dict[str, Any]] | None:
+    result = await db.execute(select(FloraPG))
+    florasPg: list[FloraPG] = result.scalars().all()
+    if not florasPg:
         return None
-    floras: list[Flora] = []
 
+    floras: list[Dict[str, Any]] = []
     for floraPg in florasPg:
         floraMongo = await mongo_engine.find_one(
             FloraMongo, FloraMongo.flora_id == str(floraPg.id)
         )
+
         floraRes = Flora(
             id=str(floraPg.id),
             user_id=floraPg.user_id,
@@ -34,21 +36,27 @@ async def get_floras(db: AsyncSession) -> list[Flora] | None:
             origin=floraMongo.Origin,
             other_details=floraMongo.OtherDetails,
         )
-        floras.append(floraRes)
-
+        floras.append(floraRes.model_dump_json())
     return floras
 
 
-async def get_flora(flora_id: str, db: AsyncSession) -> Flora | None:
-    uid = uuid.UUID(flora_id)
+async def get_flora(flora_id: str, db: AsyncSession) -> list[Dict[str, Any]] | None:
+    try:
+        uid = uuid.UUID(flora_id)
+    except ValueError:
+        return {"error": f"Invalid UUID format: {flora_id}"}
+
     result = await db.execute(select(FloraPG).where(FloraPG.id == uid))
     floraPg: FloraPG = result.scalar()
     if floraPg is None:
         return None
 
+    floras: list[Dict[str, Any]] = []
+
     floraMongo = await mongo_engine.find_one(
         FloraMongo, FloraMongo.flora_id == str(flora_id)
     )
+
     floraRes = Flora(
         id=str(floraPg.id),
         user_id=floraPg.user_id,
@@ -60,5 +68,7 @@ async def get_flora(flora_id: str, db: AsyncSession) -> Flora | None:
         origin=floraMongo.Origin,
         other_details=floraMongo.OtherDetails,
     )
-    print(floraRes)
-    return floraRes
+
+    floras.append(floraRes.model_dump_json())
+
+    return [floras]

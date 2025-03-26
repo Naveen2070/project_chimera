@@ -16,6 +16,7 @@ package rabbitmq
 
 import (
 	"log"
+	"project_chimera/gene_bank_service/pkg/common"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -35,12 +36,12 @@ func NewQueueHandler(rpcClient *RabbitMQClient, queueName string) *Handler {
 }
 
 // SendRequest handles HTTP requests and sends a RPC command to RabbitMQ
-func (h *Handler) SendRequest(c *fiber.Ctx, cmd string, param string) (interface{}, error) {
+func (h *Handler) SendRequest(c *fiber.Ctx, cmd string, param string) (common.MessageResponse, error) {
 	var data = map[string]interface{}{"param": param}
 
 	response, err := h.rpcClient.SendRPCCommand(h.queueName, cmd, data)
 	if err != nil {
-		return nil, &fiber.Error{Code: fiber.StatusInternalServerError, Message: "Command failed with error: " + err.Error()}
+		return common.MessageResponse{}, &fiber.Error{Code: fiber.StatusInternalServerError, Message: "Command failed with error: " + err.Error()}
 	}
 
 	return response, nil

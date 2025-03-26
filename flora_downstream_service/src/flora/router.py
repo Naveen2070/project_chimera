@@ -25,11 +25,11 @@ async def process_request(cmd: str, db: AsyncSession, data: dict = None) -> dict
             res = await get_floras(db)
             return {"status": "success", "data": res or []}
         elif cmd == "get_flora_by_id":
-            flora_id = data.get("flora_id")
+            flora_id = data.get("param")
             if not flora_id:
                 return {"status": "error", "message": "flora_id is required"}
             res = await get_flora(flora_id, db)
-            return {"status": "success", "data": res}
+            return {"status": "success", "data": res or []}
         else:
             return {"status": "error", "message": f"Unknown command: {cmd}"}
     except Exception as e:
@@ -62,5 +62,5 @@ async def get_flora_by_id(flora_id: str, db: AsyncSession = Depends(get_db)):
     try:
         return await get_flora(flora_id, db)
     except Exception as e:
-        print(e)
+        print(e + "from get_flora_by_id", flora_id)
         raise HTTPException(status_code=500, detail="Internal Server Error")

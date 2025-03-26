@@ -162,6 +162,43 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/flora/{id}": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Flora"
+                ],
+                "summary": "Retrieve flora data by ID from the database",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Flora ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.FloraResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -181,7 +218,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.Flora": {
+        "dto.FloraData": {
             "type": "object",
             "properties": {
                 "common_name": {
@@ -193,35 +230,33 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
-                    "description": "Unique identifier for the plant",
+                    "description": "Unique identifier",
                     "type": "string"
                 },
                 "image": {
-                    "description": "Image data (bytes)",
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
+                    "description": "Base64-encoded image",
+                    "type": "string"
                 },
                 "origin": {
-                    "description": "Origin of the plant",
+                    "description": "Geographical origin",
                     "type": "string"
                 },
                 "other_details": {
-                    "description": "Additional details about the plant",
-                    "type": "string"
+                    "description": "Additional details as key-value pairs",
+                    "type": "object",
+                    "additionalProperties": true
                 },
                 "scientific_name": {
                     "description": "Scientific name of the plant",
                     "type": "string"
                 },
                 "type": {
-                    "description": "Type of post",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.Type"
-                        }
-                    ]
+                    "description": "Type of flora (e.g., public/private)",
+                    "type": "string"
+                },
+                "user_id": {
+                    "description": "User associated with this flora",
+                    "type": "string"
                 }
             }
         },
@@ -269,7 +304,7 @@ const docTemplate = `{
                 "flora": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dto.Flora"
+                        "$ref": "#/definitions/dto.FloraData"
                     }
                 }
             }
@@ -322,21 +357,6 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
-        },
-        "dto.Type": {
-            "type": "string",
-            "enum": [
-                "tree",
-                "shrub",
-                "flower",
-                "fern"
-            ],
-            "x-enum-varnames": [
-                "Tree",
-                "Shrub",
-                "Flower",
-                "Fern"
-            ]
         }
     }
 }`

@@ -7,7 +7,7 @@ from enum import Enum as en
 Base = declarative_base()
 
 
-class Type(en):
+class Type(str, en):
     public = "public"
     private = "private"
 
