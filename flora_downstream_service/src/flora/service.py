@@ -2,7 +2,6 @@ from typing import Any, Dict, Optional
 import uuid
 from sqlalchemy.future import select
 from src.db.mongo.mongo_connect import mongo_engine
-from src.db.postgres.postgres_connect import SessionLocal
 from sqlalchemy.orm import Session
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession

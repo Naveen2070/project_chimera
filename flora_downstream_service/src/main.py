@@ -8,6 +8,7 @@ import os
 from src.db.postgres.postgres_connect import database
 from src.db.mongo.mongo_connect import mongo_client
 from src.queue.rabbit_consumer import RpcConsumer
+from src.actuator.router import actuator_router
 
 # Load environment variables
 load_dotenv()
@@ -35,6 +36,12 @@ async def lifespan(app: FastAPI):
         service_id=service_id,
         address="localhost",
         port=APP_PORT,
+        check=consul.Check.http(
+            url="http://host.docker.internal:" + str(APP_PORT) + "/actuator/health",
+            interval="15s",
+            timeout="10s",
+            deregister="10s",
+        ),
     )
     print(f"Service {service_id} in port {APP_PORT} registered with Consul!")
     await database.connect()
@@ -57,6 +64,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan, openapi_url="/swagger/v1/openapi.json")
+
+app.include_router(actuator_router)
 
 if __name__ == "__main__":
     import uvicorn
