@@ -48,6 +48,7 @@ namespace notification_service.Services
             _consumer = new AsyncEventingBasicConsumer(_channel);
             _consumer.ReceivedAsync += async (model, ea) =>
             {
+                Console.WriteLine($"Message received: {Encoding.UTF8.GetString(ea.Body.ToArray())}");
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
                 await messageHandler.Invoke(message);
@@ -55,6 +56,7 @@ namespace notification_service.Services
 
             await _channel.BasicConsumeAsync(queue: queueName, autoAck: true, consumer: _consumer);
         }
+
 
         public async ValueTask DisposeAsync()
         {

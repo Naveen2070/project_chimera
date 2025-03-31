@@ -1,10 +1,12 @@
-﻿namespace notification_service.Services.Interfaces
+﻿using System.Runtime.CompilerServices;
+
+namespace notification_service.Services.Interfaces
 {
     public interface IFloraNotificationService
     {
         Task SendNotificationAsync(string message);
 
-        Task GetSavedNotificationsAsync();
+        IAsyncEnumerable<string> GetFloraNotificationsStreamAsync(CancellationToken cancellationToken);
 
         IEnumerable<string> GetNotifications();
     }

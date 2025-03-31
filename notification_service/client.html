@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSE Example</title>
+</head>
+<body>
+    <h1>Server-Sent Events (SSE) Listener</h1>
+    <div>
+        <input type="text" id="endpoint" placeholder="Enter SSE endpoint URL">
+        <button id="startBtn">Start Listening</button>
+        <button id="stopBtn" disabled>Stop Listening</button>
+        <button id="clearBtn">Clear Messages</button>
+    </div>
+    <div id="output"></div>
+
+    <script>
+        const output = document.getElementById("output");
+        const endpointInput = document.getElementById("endpoint");
+        const startBtn = document.getElementById("startBtn");
+        const stopBtn = document.getElementById("stopBtn");
+        const clearBtn = document.getElementById("clearBtn");
+
+        let eventSource;
+
+        startBtn.onclick = () => {
+            const endpoint = endpointInput.value.trim();
+            if (!endpoint) {
+                output.innerHTML += `<p style="color:red;">Please enter a valid endpoint URL</p>`;
+                return;
+            }
+
+            eventSource = new EventSource(endpoint);
+
+            eventSource.onmessage = (event) => {
+                try {
+                    const jsonData = JSON.parse(event.data); // Parse each notification as a JSON object
+                    console.log(jsonData);
+                    const formattedMessage = `<pre style="background:#f4f4f4;padding:10px;border-radius:5px;">
+                        ${JSON.stringify(jsonData, null, 2)}
+                    </pre>`;
+
+                    output.innerHTML += formattedMessage; // Display each notification separately
+                } catch (error) {
+                    console.error('JSON Parse Error:', error);
+                    output.innerHTML += `<p style="color:red;">Error parsing JSON data</p>`;
+                }
+            };
+
+            eventSource.onerror = (error) => {
+                console.error('SSE Error:', error);
+                eventSource.close();
+                output.innerHTML += `<p style="color:red;">Connection closed due to error</p>`;
+                stopBtn.disabled = true;
+                startBtn.disabled = false;
+            };
+
+            output.innerHTML += `<p style="color:green;">Started listening to ${endpoint}</p>`;
+            stopBtn.disabled = false;
+            startBtn.disabled = true;
+        };
+
+        stopBtn.onclick = () => {
+            if (eventSource) {
+                eventSource.close();
+                output.innerHTML += `<p style="color:orange;">Stopped listening</p>`;
+                stopBtn.disabled = true;
+                startBtn.disabled = false;
+            }
+        };
+
+        clearBtn.onclick = () => {
+            output.innerHTML = ""; // Clears all displayed messages
+        };
+    </script>
+</body>
+</html>

@@ -30,6 +30,8 @@ builder.Services.AddSingleton<IRMQConsumerService>(provider =>
     return RMQConsumerService.CreateAsync(configuration).GetAwaiter().GetResult();
 });
 
+builder.Services.AddScoped<IFloraNotificationService, FloraNotificationService>();
+
 // Add health checks
 builder.Services.AddHealthChecks()
     .AddCheck("Self", () => HealthCheckResult.Healthy(), tags: new[] { "ready", "live" });
@@ -45,6 +47,18 @@ builder.Services.AddSingleton<IConsulClient>(p => new ConsulClient(config =>
 // Add Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Add CORS policy
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
+
 
 // Build the application
 var app = builder.Build();
@@ -88,6 +102,10 @@ lifetime.ApplicationStopping.Register(async () =>
 });
 
 app.UseHttpsRedirection();
+
+// Use CORS
+app.UseCors("AllowAll");
+
 app.UseAuthorization();
 app.MapControllers();
 

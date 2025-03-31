@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using notification_service.Services.Interfaces;
 
 namespace notification_service.Services
@@ -6,27 +7,39 @@ namespace notification_service.Services
     public class FloraNotificationService : IFloraNotificationService
     {
         private readonly IRMQConsumerService _rmqConsumerService;
-        private readonly ConcurrentBag<string> _notifications; // Thread-safe collection
+        private readonly ConcurrentQueue<string> _notificationQueue = new();
 
         public FloraNotificationService(IRMQConsumerService rmqConsumerService)
         {
             _rmqConsumerService = rmqConsumerService;
-            _notifications = new ConcurrentBag<string>();
+            StartListening();
         }
 
-        public async Task GetSavedNotificationsAsync()
+        private void StartListening()
         {
-            await _rmqConsumerService.StartListeningAsync("notification_queue", async (message) =>
+            _rmqConsumerService.StartListeningAsync("notification_queue", async (message) =>
             {
-                // Store messages in a thread-safe collection
-                _notifications.Add(message);
-                await Task.CompletedTask; // Ensure async compatibility
+                Console.WriteLine($"Received message: {message}");
+                _notificationQueue.Enqueue(message.ToString());
             });
+        }
+
+        public async IAsyncEnumerable<string> GetFloraNotificationsStreamAsync([EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                while (_notificationQueue.TryDequeue(out var message))
+                {
+                    yield return message;
+                }
+
+                await Task.Delay(500, cancellationToken);
+            }
         }
 
         public IEnumerable<string> GetNotifications()
         {
-            return _notifications;
+            throw new NotImplementedException();
         }
 
         public Task SendNotificationAsync(string message)
