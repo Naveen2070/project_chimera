@@ -71,11 +71,14 @@ if (app.Environment.IsDevelopment())
 }
 
 // Get the lifetime of the application
-var lifetime = app.Lifetime;
+IHostApplicationLifetime lifetime = app.Lifetime;
+
 // Get the Consul client
-var consulClient = app.Services.GetRequiredService<IConsulClient>();
+IConsulClient consulClient = app.Services.GetRequiredService<IConsulClient>();
+
 // Generate a unique service ID
-var serviceId = Guid.NewGuid().ToString();
+string guid = Guid.NewGuid().ToString();
+string serviceId = "notification_service" + "-"  + guid.Split('-')[0]+ "-" + guid.Split('-')[2];
 
 // Register the service with Consul
 var registration = new AgentServiceRegistration

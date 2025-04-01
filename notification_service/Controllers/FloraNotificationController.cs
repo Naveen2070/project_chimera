@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using notification_service.Services.Interfaces;
 
 namespace notification_service.Controllers
@@ -30,11 +29,12 @@ namespace notification_service.Controllers
             Response.Headers.Append("Cache-Control", "no-cache");
             Response.Headers.Append("Connection", "keep-alive");
 
-            await foreach (var message in _floraNotificationService.GetFloraNotificationsStreamAsync(cancellationToken))
-            {
-                var jsonMessage = JsonConvert.SerializeObject(message);
+            string clientId = Guid.NewGuid().ToString();
 
-                await Response.WriteAsync($"data: {jsonMessage}\n\n");
+            await foreach (var message in _floraNotificationService.GetFloraNotificationsStreamAsync(clientId, cancellationToken))
+            {
+                Console.WriteLine($"Sending to {clientId}: {message}");
+                await Response.WriteAsync($"data: {message}\n\n");
                 await Response.Body.FlushAsync();
             }
         }

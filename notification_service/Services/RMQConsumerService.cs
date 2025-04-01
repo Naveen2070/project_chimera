@@ -2,7 +2,6 @@
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace notification_service.Services
 {
@@ -41,22 +40,36 @@ namespace notification_service.Services
             await _channel.QueueDeclareAsync(queueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
         }
 
-        public async Task StartListeningAsync(string queueName, Func<string, Task> messageHandler)
+        public async Task StartListeningAsync(string queueName, Func<string, ulong, Task> messageHandler)
         {
             await InitializeQueueAsync(queueName); // Declare queue dynamically
 
             _consumer = new AsyncEventingBasicConsumer(_channel);
             _consumer.ReceivedAsync += async (model, ea) =>
             {
-                Console.WriteLine($"Message received: {Encoding.UTF8.GetString(ea.Body.ToArray())}");
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
-                await messageHandler.Invoke(message);
+                Console.WriteLine($"Message received: {message}");
+
+                try
+                {
+                    await messageHandler.Invoke(message, ea.DeliveryTag);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error processing message: {ex.Message}");
+                    // Decide if you want to reject the message using BasicNack
+                }
             };
 
-            await _channel.BasicConsumeAsync(queue: queueName, autoAck: true, consumer: _consumer);
+            await _channel.BasicConsumeAsync(queue: queueName, autoAck: false, consumer: _consumer);
         }
 
+        public async Task AckMessage(ulong deliveryTag)
+        {
+            Console.WriteLine($"Acking message: {deliveryTag}");
+            await _channel.BasicAckAsync(deliveryTag, multiple: false);
+        }
 
         public async ValueTask DisposeAsync()
         {

@@ -11,10 +11,9 @@
 //		WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //		See the License for the specific language governing permissions and
 //		limitations under the License.
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { FloraPg } from './dto/create-flora_upstream.dto';
 import { PrismaService } from 'src/prisma_client/prisma.service';
-import { Prisma } from '@prisma/client';
 import { InjectModel } from '@nestjs/mongoose';
 import { Flora as FloraMongo } from './schema/flora.schema';
 import { Model } from 'mongoose';
@@ -24,12 +23,15 @@ import {
   toFloraPg,
   toFloraUpstream,
 } from 'src/utils/data-mapper';
+import { ClientProxy } from '@nestjs/microservices';
+import { NotificationResponse } from './dto/notification_response';
 
 @Injectable()
 export class FloraUpstreamService {
   constructor(
     private readonly prisma: PrismaService,
     @InjectModel(FloraMongo.name) private floraModel: Model<FloraMongo>,
+    @Inject('NOTIFICATION_SERVICE') private readonly RmqClient: ClientProxy,
   ) {}
 
   async create(data: FloraUpstream): Promise<FloraUpstream | Error> {
@@ -52,6 +54,19 @@ export class FloraUpstreamService {
 
       const result: FloraUpstream = toFloraUpstream(pgResult, mongoData);
 
+      const notification = this.RmqClient.emit(
+        'flora-created',
+        new NotificationResponse({
+          type: 'POST',
+          status: 'success',
+          code: 201,
+          data: JSON.stringify(result),
+        }),
+      );
+      notification.subscribe(() => {
+        console.log('Notification sent successfully');
+      });
+
       return result;
     } catch (error) {
       // Rollback PostgreSQL changes if necessary
@@ -61,16 +76,21 @@ export class FloraUpstreamService {
         });
         console.log('PostgreSQL transaction rolled back.');
       }
-
+      const notification = this.RmqClient.emit(
+        'flora-created',
+        new NotificationResponse({
+          type: 'POST',
+          status: 'success',
+          code: 201,
+          data: JSON.stringify(error),
+        }),
+      );
+      notification.subscribe(() => {
+        console.log('Notification sent successfully');
+      });
       console.log(error);
       throw error;
     }
-  }
-
-  async findOne(condition: Prisma.FloraWhereUniqueInput) {
-    return await this.prisma.flora.findUnique({
-      where: condition,
-    });
   }
 
   async update(id: string, data: FloraUpstream) {
@@ -100,6 +120,17 @@ export class FloraUpstreamService {
         pgResult,
         mongoResult as FloraMongo,
       );
+
+      this.RmqClient.emit(
+        'flora-updated',
+        new NotificationResponse({
+          type: 'PUT',
+          status: 'success',
+          code: 200,
+          data: JSON.stringify(updatedFlora),
+        }),
+      );
+
       return updatedFlora;
     } catch (error) {
       console.log(error);

@@ -8,6 +8,7 @@ namespace notification_service.Services
     {
         private readonly IRMQConsumerService _rmqConsumerService;
         private readonly ConcurrentQueue<string> _notificationQueue = new();
+        private readonly ConcurrentDictionary<string, bool> _connectedClients = new();
 
         public FloraNotificationService(IRMQConsumerService rmqConsumerService)
         {
@@ -17,34 +18,79 @@ namespace notification_service.Services
 
         private void StartListening()
         {
-            _rmqConsumerService.StartListeningAsync("notification_queue", async (message) =>
+            _rmqConsumerService.StartListeningAsync("notification_queue", async (message, deliveryTag) =>
             {
                 Console.WriteLine($"Received message: {message}");
-                _notificationQueue.Enqueue(message.ToString());
+
+                if (_connectedClients.Count > 0)
+                {
+                    // If clients are connected, broadcast the message immediately
+                    foreach (var key in _connectedClients.Keys)
+                    {
+                        _notificationQueue.Enqueue(message);
+                    }
+                }
+                else
+                {
+                    // If no clients are connected, store the message for later
+                    _notificationQueue.Enqueue(message);
+                }
+
+                try
+                {
+                    await _rmqConsumerService.AckMessage(deliveryTag);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                    throw new Exception(ex.Message);
+                }
             });
         }
 
-        public async IAsyncEnumerable<string> GetFloraNotificationsStreamAsync([EnumeratorCancellation] CancellationToken cancellationToken)
+        public void AddClient(string clientId)
         {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                while (_notificationQueue.TryDequeue(out var message))
-                {
-                    yield return message;
-                }
+            _connectedClients.TryAdd(clientId, true);
+        }
 
-                await Task.Delay(500, cancellationToken);
+        public void RemoveClient(string clientId)
+        {
+            _connectedClients.TryRemove(clientId, out _);
+        }
+
+        public async IAsyncEnumerable<string> GetFloraNotificationsStreamAsync(
+            string clientId,
+            [EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            AddClient(clientId);
+
+            try
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    while (_notificationQueue.TryDequeue(out var message))
+                    {
+                        yield return message;
+                    }
+
+                    await Task.Delay(500, cancellationToken);
+                }
+            }
+            finally
+            {
+                RemoveClient(clientId);
             }
         }
 
         public IEnumerable<string> GetNotifications()
         {
-            throw new NotImplementedException();
+            return _notificationQueue.ToArray();
         }
 
         public Task SendNotificationAsync(string message)
         {
-            throw new NotImplementedException();
+            _notificationQueue.Enqueue(message);
+            return Task.CompletedTask;
         }
     }
 }

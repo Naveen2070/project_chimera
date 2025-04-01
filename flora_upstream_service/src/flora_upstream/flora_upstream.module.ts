@@ -17,10 +17,12 @@ import { FloraUpstreamController } from './flora_upstream.controller';
 import { PrismaService } from 'src/prisma_client/prisma.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Flora, FloraSchema } from './schema/flora.schema';
+import { RmqClientModule } from 'src/client/Rmq.client';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Flora.name, schema: FloraSchema }]),
+    RmqClientModule.register('notification', 'notification_queue'),
   ],
   controllers: [FloraUpstreamController],
   providers: [FloraUpstreamService, PrismaService],

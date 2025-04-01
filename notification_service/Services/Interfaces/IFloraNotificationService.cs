@@ -6,7 +6,7 @@ namespace notification_service.Services.Interfaces
     {
         Task SendNotificationAsync(string message);
 
-        IAsyncEnumerable<string> GetFloraNotificationsStreamAsync(CancellationToken cancellationToken);
+        IAsyncEnumerable<string> GetFloraNotificationsStreamAsync(string clientId, CancellationToken cancellationToken);
 
         IEnumerable<string> GetNotifications();
     }

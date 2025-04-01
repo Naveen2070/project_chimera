@@ -12,6 +12,7 @@
 //		See the License for the specific language governing permissions and
 //		limitations under the License.
 import { Module, DynamicModule } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 
 @Module({})
@@ -20,14 +21,21 @@ export class RmqClientModule {
     return {
       module: RmqClientModule,
       imports: [
-        ClientsModule.register([
+        ClientsModule.registerAsync([
           {
+            imports: [ConfigModule],
             name: `${name.toUpperCase()}_SERVICE`,
-            transport: Transport.RMQ,
-            options: {
-              urls: ['amqp://admin:naveen@2007@localhost:5672'],
-              queue,
-            },
+            useFactory: (configService: ConfigService) => ({
+              transport: Transport.RMQ,
+              options: {
+                urls: [configService.get<string>('RABBIT_MQ_URL') as string],
+                queue: queue,
+                queueOptions: {
+                  durable: true,
+                },
+              },
+            }),
+            inject: [ConfigService],
           },
         ]),
       ],
