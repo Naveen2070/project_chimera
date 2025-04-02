@@ -21,8 +21,11 @@ import (
 	"project_chimera/error_handle_service/config"
 	"project_chimera/error_handle_service/config/consul"
 	"project_chimera/error_handle_service/config/db"
+	"project_chimera/error_handle_service/config/rabbitmq"
 	"project_chimera/error_handle_service/internal/actuators"
+	"project_chimera/error_handle_service/internal/dump"
 	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -30,43 +33,72 @@ import (
 
 func main() {
 	config.LoadConfig()
-	db.ConnectDB()
 
 	app := fiber.New()
-
-	// Routes
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"message": "Welcome to Fiber with MongoDB!"})
-	})
 
 	// Logger setup
 	app.Use(logger.New(logger.Config{
 		Format: "${time} | ${ip}:${port} | ${status} | ${method} | ${path} | ${latency}\n",
 	}))
 
+	// MongoDB setup
+	db.ConnectDB()
+
 	// Start Consul registration
-	err := consul.RegisterWithConsul()
+	consul.RegisterWithConsul()
+
+	// RabbitMQ setup
+	queueName := "error_dump_queue"
+
+	// Define retry parameters
+	maxAttempts := 5
+	retryDelay := 2 * time.Second
+
+	// Initialize RabbitMQ Consumer with retries
+	consumer, err := rabbitmq.NewConsumer(queueName, maxAttempts, retryDelay)
 	if err != nil {
-		log.Fatalf("Error registering service with Consul: %v", err)
+		log.Fatalf("Could not initialize RabbitMQ consumer: %v", err)
 	}
 
-	// Handle graceful shutdown
+	// Start consuming messages
+	log.Println("Starting RabbitMQ consumer...")
+	if err := dump.InitFloraDumpService(consumer); err != nil {
+		log.Fatalf("Flora dump service failed to start: %v", err)
+	}
+
+	// Graceful shutdown handling
+	shutdownChan := make(chan os.Signal, 1)
+	signal.Notify(shutdownChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+
 	go func() {
-		// Create a channel to receive system interrupt signals
-		signalChan := make(chan os.Signal, 1)
-		signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+		<-shutdownChan
+		log.Println("Received shutdown signal. Cleaning up...")
 
-		// Block until we receive a signal
-		<-signalChan
-
-		// Deregister the service from Consul on shutdown
-		err := consul.DeregisterFromConsul()
-		if err != nil {
-			log.Fatalf("Error deregistering service from Consul: %v", err)
+		// Deregister the service from Consul
+		if err := consul.DeregisterFromConsul(); err != nil {
+			log.Printf("Error deregistering service from Consul: %v", err)
+		} else {
+			log.Println("Service deregistered from Consul successfully.")
 		}
 
-		log.Println("Service deregistered from Consul, shutting down gracefully.")
+		// Close RabbitMQ Consumer
+		log.Println("Closing RabbitMQ consumer...")
+		consumer.Close()
+
+		// Shutdown Fiber server
+		log.Println("Shutting down Fiber server...")
+		if err := app.Shutdown(); err != nil {
+			log.Printf("Error shutting down Fiber server: %v", err)
+		}
+
+		log.Println("Application shutdown complete.")
+		os.Exit(0)
 	}()
+
+	// Routes
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{"message": "Welcome to Fiber with MongoDB!"})
+	})
 
 	// Set up route groups
 	actuatorGroup := app.Group("/actuator")

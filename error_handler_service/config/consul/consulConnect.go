@@ -15,7 +15,6 @@
 package consul
 
 import (
-	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -30,8 +29,7 @@ var customUUID = uuid.New().String()
 var ServiceID = "error_handle_service" + "-" + strings.Split(customUUID, "-")[0] + "-" + strings.Split(customUUID, "-")[4]
 
 // RegisterWithConsul registers the service with Consul
-func RegisterWithConsul() error {
-	fmt.Println(strings.Split(customUUID, "-"))
+func RegisterWithConsul() {
 	// Setup Consul client
 	config := api.DefaultConfig()
 	config.Address = Config.Env.ConsulHost + ":" + Config.Env.ConsulPort
@@ -60,11 +58,9 @@ func RegisterWithConsul() error {
 	err = client.Agent().ServiceRegister(registration)
 	if err != nil {
 		log.Fatalf("Error registering service with Consul: %v", err)
-		return err
 	}
 
 	log.Printf("Service %s registered with Consul", Config.Env.ServiceName)
-	return nil
 }
 
 // DeregisterFromConsul deregisters the service from Consul

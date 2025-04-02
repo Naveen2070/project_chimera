@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -31,47 +32,64 @@ type Consumer struct {
 	queue   string
 }
 
-// NewConsumer initializes a new RabbitMQ consumer with retries
-func NewConsumer(queueName string, maxAttempts int, retryDelay time.Duration) (*Consumer, error) {
-	rabbitMQURL := os.Getenv("RABBITMQ_URL")
-	if rabbitMQURL == "" {
-		return nil, fmt.Errorf("RABBITMQ_URL environment variable is not set")
-	}
+// Singleton consumer instance
+var instance *Consumer
+var once sync.Once
 
-	var conn *amqp.Connection
-	var ch *amqp.Channel
+// NewConsumer initializes the singleton RabbitMQ consumer
+func NewConsumer(queueName string, maxAttempts int, retryDelay time.Duration) (*Consumer, error) {
 	var err error
 
-	for i := 0; i < maxAttempts; i++ {
-		conn, err = amqp.Dial(rabbitMQURL)
-		if err == nil {
-			ch, err = conn.Channel()
-			if err == nil {
-				_, err = ch.QueueDeclare(
-					queueName,
-					true,  // durable
-					false, // auto-delete
-					false, // exclusive
-					false, // no-wait
-					nil,   // arguments
-				)
-				if err == nil {
-					log.Printf("Connected to RabbitMQ (attempt %d)", i+1)
-					return &Consumer{conn: conn, channel: ch, queue: queueName}, nil
-				}
-			}
+	once.Do(func() {
+		rabbitMQURL := os.Getenv("RABBITMQ_URL")
+		if rabbitMQURL == "" {
+			err = fmt.Errorf("RABBITMQ_URL environment variable is not set")
+			return
 		}
 
-		log.Printf("Failed to connect to RabbitMQ (attempt %d): %v", i+1, err)
-		time.Sleep(retryDelay)
-	}
+		for i := 1; i <= maxAttempts; i++ {
+			conn, connErr := amqp.Dial(rabbitMQURL)
+			if connErr != nil {
+				err = connErr
+				log.Printf("Failed to connect to RabbitMQ (attempt %d/%d): %v", i, maxAttempts, err)
+				time.Sleep(retryDelay)
+				continue
+			}
 
-	// Return error after max attempts
-	return nil, fmt.Errorf("could not connect to RabbitMQ after %d attempts: %w", maxAttempts, err)
+			ch, chErr := conn.Channel()
+			if chErr != nil {
+				err = chErr
+				log.Printf("Failed to open channel (attempt %d/%d): %v", i, maxAttempts, err)
+				conn.Close()
+				time.Sleep(retryDelay)
+				continue
+			}
+
+			_, queueErr := ch.QueueDeclare(
+				queueName, true, false, false, false, nil,
+			)
+			if queueErr != nil {
+				err = queueErr
+				log.Printf("Failed to declare queue (attempt %d/%d): %v", i, maxAttempts, err)
+				ch.Close()
+				conn.Close()
+				time.Sleep(retryDelay)
+				continue
+			}
+
+			// Successfully connected
+			log.Printf("Connected to RabbitMQ on attempt %d/%d", i, maxAttempts)
+			instance = &Consumer{conn: conn, channel: ch, queue: queueName}
+			err = nil
+			return
+		}
+	})
+
+	return instance, err
 }
 
-// Consume listens for messages and dispatches them
-func (c *Consumer) Consume(handler func(body map[string]interface{})) error {
+// Consume starts consuming messages, but processing is handled by the service
+func (c *Consumer) Consume(handler func(map[string]interface{})) error {
 	msgs, err := c.channel.Consume(
 		c.queue,
 		"",
@@ -84,6 +102,8 @@ func (c *Consumer) Consume(handler func(body map[string]interface{})) error {
 	if err != nil {
 		return err
 	}
+
+	log.Println("RabbitMQ consumer started...")
 
 	go func() {
 		for msg := range msgs {
