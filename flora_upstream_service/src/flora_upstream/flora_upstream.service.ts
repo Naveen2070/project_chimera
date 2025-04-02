@@ -60,7 +60,7 @@ export class FloraUpstreamService {
           type: 'POST',
           status: 'success',
           code: 201,
-          data: JSON.stringify(result),
+          data: JSON.stringify(result.id),
         }),
       );
       notification.subscribe(() => {
@@ -80,8 +80,8 @@ export class FloraUpstreamService {
         'flora-created',
         new NotificationResponse({
           type: 'POST',
-          status: 'success',
-          code: 201,
+          status: 'error',
+          code: 500,
           data: JSON.stringify(error),
         }),
       );
@@ -127,13 +127,22 @@ export class FloraUpstreamService {
           type: 'PUT',
           status: 'success',
           code: 200,
-          data: JSON.stringify(updatedFlora),
+          data: JSON.stringify(updatedFlora.id),
         }),
       );
 
       return updatedFlora;
     } catch (error) {
       console.log(error);
+      this.RmqClient.emit(
+        'flora-updated',
+        new NotificationResponse({
+          type: 'PUT',
+          status: 'error',
+          code: 500,
+          data: JSON.stringify(error),
+        }),
+      );
       throw error;
     }
   }
