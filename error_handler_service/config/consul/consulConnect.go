@@ -15,11 +15,12 @@
 package consul
 
 import (
-	"log"
+	"fmt"
 	"strconv"
 	"strings"
 
 	Config "project_chimera/error_handle_service/config"
+	logger "project_chimera/error_handle_service/pkg/logger"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/consul/api"
@@ -35,7 +36,7 @@ func RegisterWithConsul() {
 	config.Address = Config.Env.ConsulHost + ":" + Config.Env.ConsulPort
 	client, err := api.NewClient(config)
 	if err != nil {
-		log.Fatalf("Error creating Consul client: %v", err)
+		logger.LogFatal("Error creating Consul client: " + err.Error())
 	}
 
 	// Service registration
@@ -57,10 +58,10 @@ func RegisterWithConsul() {
 	// Register the service
 	err = client.Agent().ServiceRegister(registration)
 	if err != nil {
-		log.Fatalf("Error registering service with Consul: %v", err)
+
 	}
 
-	log.Printf("Service %s registered with Consul", Config.Env.ServiceName)
+	logger.LogInfo(fmt.Sprintf("Service %s registered with Consul", Config.Env.ServiceName))
 }
 
 // DeregisterFromConsul deregisters the service from Consul
@@ -70,17 +71,17 @@ func DeregisterFromConsul() error {
 	config.Address = Config.Env.ConsulHost + ":" + Config.Env.ConsulPort
 	client, err := api.NewClient(config)
 	if err != nil {
-		log.Printf("Error creating Consul client: %v", err)
+		logger.LogError(fmt.Sprintf("Error creating Consul client: %v", err))
 		return err
 	}
 
 	// Deregister the service
 	err = client.Agent().ServiceDeregister(ServiceID)
 	if err != nil {
-		log.Printf("Error deregistering service from Consul: %v", err)
+		logger.LogError(fmt.Sprintf("Error deregistering service from Consul: %v", err))
 		return err
 	}
 
-	log.Printf("Service %s deregistered from Consul", ServiceID)
+	logger.LogInfo(fmt.Sprintf("Service %s deregistered from Consul", ServiceID))
 	return nil
 }

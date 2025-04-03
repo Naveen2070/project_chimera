@@ -17,10 +17,11 @@ package rabbitmq
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"sync"
 	"time"
+
+	logger "project_chimera/error_handle_service/pkg/logger"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -51,7 +52,7 @@ func NewConsumer(queueName string, maxAttempts int, retryDelay time.Duration) (*
 			conn, connErr := amqp.Dial(rabbitMQURL)
 			if connErr != nil {
 				err = connErr
-				log.Printf("Failed to connect to RabbitMQ (attempt %d/%d): %v", i, maxAttempts, err)
+				logger.LogError(fmt.Sprintf("Failed to connect to RabbitMQ (attempt %d/%d): %v", i, maxAttempts, err))
 				time.Sleep(retryDelay)
 				continue
 			}
@@ -59,7 +60,7 @@ func NewConsumer(queueName string, maxAttempts int, retryDelay time.Duration) (*
 			ch, chErr := conn.Channel()
 			if chErr != nil {
 				err = chErr
-				log.Printf("Failed to open channel (attempt %d/%d): %v", i, maxAttempts, err)
+				logger.LogError(fmt.Sprintf("Failed to open channel (attempt %d/%d): %v", i, maxAttempts, err))
 				conn.Close()
 				time.Sleep(retryDelay)
 				continue
@@ -71,7 +72,7 @@ func NewConsumer(queueName string, maxAttempts int, retryDelay time.Duration) (*
 			)
 			if queueErr != nil {
 				err = queueErr
-				log.Printf("Failed to declare queue (attempt %d/%d): %v", i, maxAttempts, err)
+				logger.LogError(fmt.Sprintf("Failed to declare queue (attempt %d/%d): %v", i, maxAttempts, err))
 				ch.Close()
 				conn.Close()
 				time.Sleep(retryDelay)
@@ -79,7 +80,7 @@ func NewConsumer(queueName string, maxAttempts int, retryDelay time.Duration) (*
 			}
 
 			// Successfully connected
-			log.Printf("Connected to RabbitMQ on attempt %d/%d", i, maxAttempts)
+			logger.LogInfo(fmt.Sprintf("Connected to RabbitMQ on attempt %d/%d", i, maxAttempts))
 			instance = &Consumer{conn: conn, channel: ch, queue: queueName}
 			err = nil
 			return
@@ -90,7 +91,7 @@ func NewConsumer(queueName string, maxAttempts int, retryDelay time.Duration) (*
 }
 
 // Consume starts consuming messages, but processing is handled by the service
-func (c *Consumer) Consume(handler func(map[string]interface{}, uint64)) error {
+func (c *Consumer) Consume(handler func(body []byte, deliveryTag uint64)) error {
 	msgs, err := c.channel.Consume(
 		c.queue,
 		"",    // consumer tag
@@ -104,17 +105,12 @@ func (c *Consumer) Consume(handler func(map[string]interface{}, uint64)) error {
 		return err
 	}
 
-	log.Println("RabbitMQ consumer started...")
+	logger.LogInfo("RabbitMQ consumer started...")
 
 	go func() {
 		for msg := range msgs {
-			var body map[string]interface{}
-			if err := json.Unmarshal(msg.Body, &body); err != nil {
-				log.Printf("Failed to unmarshal message: %v", err)
-				continue
-			}
 			// Pass the body and delivery tag to the handler
-			handler(body, msg.DeliveryTag)
+			handler(msg.Body, msg.DeliveryTag)
 		}
 	}()
 
@@ -180,6 +176,6 @@ func (c *Consumer) SendMessage(queueName string, message map[string]interface{})
 		return fmt.Errorf("failed to publish message: %v", err)
 	}
 
-	log.Printf("Message sent to queue %s", queueName)
+	logger.LogInfo(fmt.Sprintf("Message sent to queue %s", queueName))
 	return nil
 }

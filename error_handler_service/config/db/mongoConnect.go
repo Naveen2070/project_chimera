@@ -22,6 +22,8 @@ import (
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	logger "project_chimera/error_handle_service/pkg/logger"
 )
 
 var DB *mongo.Client
@@ -43,16 +45,16 @@ func ConnectDB() {
 	// Ping MongoDB
 	err = DB.Ping(ctx, nil)
 	if err != nil {
-		log.Fatal("Could not connect to MongoDB:", err)
+		logger.LogFatal("Could not connect to MongoDB: " + err.Error())
 	} else {
-		log.Println("Connected to MongoDB!")
+		logger.LogInfo("Connected to MongoDB!")
 	}
 }
 
 // GetCollection returns a MongoDB collection for a specific database and collection name.
 func GetCollection(databaseName, collectionName string) *mongo.Collection {
 	if DB == nil {
-		log.Fatal("Database connection is not initialized")
+		logger.LogFatal("Database connection is not initialized")
 	}
 
 	return DB.Database(databaseName).Collection(collectionName)

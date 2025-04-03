@@ -15,6 +15,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -24,6 +25,7 @@ import (
 	"project_chimera/error_handle_service/config/rabbitmq"
 	"project_chimera/error_handle_service/internal/actuators"
 	"project_chimera/error_handle_service/internal/dump"
+	customlogger "project_chimera/error_handle_service/pkg/logger"
 	"syscall"
 	"time"
 
@@ -37,9 +39,7 @@ func main() {
 	app := fiber.New()
 
 	// Logger setup
-	app.Use(logger.New(logger.Config{
-		Format: "${time} | ${ip}:${port} | ${status} | ${method} | ${path} | ${latency}\n",
-	}))
+	app.Use(logger.New(customlogger.InitLogger()))
 
 	// MongoDB setup
 	db.ConnectDB()
@@ -59,13 +59,13 @@ func main() {
 	// Initialize RabbitMQ Consumer with retries
 	consumer, err := rabbitmq.NewConsumer(queueName, maxAttempts, retryDelay)
 	if err != nil {
-		log.Fatalf("Could not initialize RabbitMQ consumer: %v", err)
+		customlogger.LogFatal(fmt.Sprintf("Failed to initialize RabbitMQ consumer:\n%s", err.Error()))
 	}
 
 	// Start consuming messages
 	log.Println("Starting RabbitMQ consumer...")
 	if err := dump.InitFloraDumpService(consumer, collection); err != nil {
-		log.Fatalf("Flora dump service failed to start: %v", err)
+		customlogger.LogFatal(fmt.Sprintf("Failed to start flora dump service:\n%s", err.Error()))
 	}
 
 	// Graceful shutdown handling
@@ -74,26 +74,26 @@ func main() {
 
 	go func() {
 		<-shutdownChan
-		log.Println("Received shutdown signal. Cleaning up...")
+		customlogger.LogInfo("Received shutdown signal. Cleaning up...")
 
 		// Deregister the service from Consul
 		if err := consul.DeregisterFromConsul(); err != nil {
-			log.Printf("Error deregistering service from Consul: %v", err)
+			customlogger.LogError(fmt.Sprintf("Failed to deregister from Consul:\n%s", err.Error()))
 		} else {
-			log.Println("Service deregistered from Consul successfully.")
+			customlogger.LogInfo("Service deregistered from Consul")
 		}
 
 		// Close RabbitMQ Consumer
-		log.Println("Closing RabbitMQ consumer...")
+		customlogger.LogInfo("Closing RabbitMQ Consumer...")
 		consumer.Close()
 
 		// Shutdown Fiber server
-		log.Println("Shutting down Fiber server...")
+		customlogger.LogInfo("Shutting down Fiber server...")
 		if err := app.Shutdown(); err != nil {
-			log.Printf("Error shutting down Fiber server: %v", err)
+			customlogger.LogError(fmt.Sprintf("Failed to shutdown Fiber server:\n%s", err.Error()))
 		}
 
-		log.Println("Application shutdown complete.")
+		customlogger.LogInfo("Graceful shutdown completed.")
 		os.Exit(0)
 	}()
 
@@ -108,5 +108,8 @@ func main() {
 	// Register routes
 	actuators.ActuatorRouter(actuatorGroup)
 
-	log.Fatal(app.Listen(":" + config.Env.AppPort))
+	err = app.Listen(":" + config.Env.AppPort)
+	if err != nil {
+		customlogger.LogFatal(fmt.Sprintf("Failed to start server:\n%s", err.Error()))
+	}
 }

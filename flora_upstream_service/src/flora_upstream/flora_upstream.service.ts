@@ -83,6 +83,8 @@ export class FloraUpstreamService {
           type: 'POST',
           status: 'error',
           code: 500,
+          message:
+            'Please check the failed uploads for more details and fix the issue',
           data: error.message,
         }),
       ).subscribe(() => {

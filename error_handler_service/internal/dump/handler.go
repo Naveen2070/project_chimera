@@ -15,15 +15,15 @@
 package dump
 
 import (
-	"log"
 	"project_chimera/error_handle_service/config/rabbitmq"
+	logger "project_chimera/error_handle_service/pkg/logger"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // OrderHandler defines the interface for handling order-related requests
 type FloraDumpHandler interface {
-	ConsumeMessage(body map[string]interface{}, deliveryTag uint64)
+	ConsumeMessage(body []byte, deliveryTag uint64)
 }
 
 // orderHandler is the concrete implementation of OrderHandler
@@ -37,7 +37,7 @@ func NewFloraDumpHandler(service FloraDumpService) FloraDumpHandler {
 }
 
 // ConsumeMessage processes incoming RabbitMQ messages for orders
-func (h *floraDumpHandler) ConsumeMessage(body map[string]interface{}, deliveryTag uint64) {
+func (h *floraDumpHandler) ConsumeMessage(body []byte, deliveryTag uint64) {
 	h.service.ProcessOrderEvent(body, deliveryTag)
 }
 
@@ -52,6 +52,6 @@ func InitFloraDumpService(consumer *rabbitmq.Consumer, collection *mongo.Collect
 		return err
 	}
 
-	log.Println("Flora dump consumer service started...")
+	logger.LogInfo("Flora dump service started...")
 	return nil
 }

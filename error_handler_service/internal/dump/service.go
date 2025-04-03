@@ -16,16 +16,18 @@ package dump
 
 import (
 	"context"
-	"log"
+	"encoding/json"
+	"project_chimera/error_handle_service/pkg/common"
+	logger "project_chimera/error_handle_service/pkg/logger"
+	"project_chimera/error_handle_service/pkg/models"
 
 	"github.com/rabbitmq/amqp091-go"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // FloraDumpService defines the interface for order processing
 type FloraDumpService interface {
-	ProcessOrderEvent(body map[string]interface{}, deliveryTag uint64)
+	ProcessOrderEvent(body []byte, deliveryTag uint64)
 }
 
 // floraDumpService is the concrete implementation of FloraDumpService
@@ -43,40 +45,41 @@ func NewFloraDumpService(channel *amqp091.Channel, collection *mongo.Collection)
 }
 
 // ProcessOrderEvent handles RabbitMQ messages for orders
-func (s *floraDumpService) ProcessOrderEvent(body map[string]interface{}, deliveryTag uint64) {
-	eventType, ok := body["pattern"].(string)
-	if !ok {
-		log.Println("Invalid message format: missing 'pattern' field")
+func (s *floraDumpService) ProcessOrderEvent(body []byte, deliveryTag uint64) {
+	var floraResp models.FloraResponse
+
+	// Parse JSON into the FloraResponse struct
+	err := json.Unmarshal(body, &floraResp)
+	if err != nil {
+		logger.LogError("Failed to parse message body: " + err.Error())
 		return
 	}
 
+	eventType := floraResp.Pattern
+
 	switch eventType {
 	case "flora.created":
-		log.Printf("Processing flora.save event: %+v", body)
-		s.saveFloraToDB(body) // Save the flora data to MongoDB
+		logger.LogInfo("Processing flora.created event")
+		s.saveFloraToDB(floraResp)
 		s.acknowledgeMessage(deliveryTag)
 	case "flora.updated":
-		log.Printf("Processing flora.update event: %+v", body)
+		logger.LogInfo("Processing flora.updated event")
 		//TODO Handle flora update logic
 		s.acknowledgeMessage(deliveryTag)
 	}
 }
 
 // Method to insert flora data into MongoDB
-func (s *floraDumpService) saveFloraToDB(body map[string]interface{}) {
+func (s *floraDumpService) saveFloraToDB(body models.FloraResponse) {
 	// You can modify the data structure as per your MongoDB schema
-	document := bson.D{
-		{Key: "pattern", Value: body["pattern"]},
-		{Key: "name", Value: body["name"]},
-		{Key: "createdAt", Value: body["createdAt"]},
-	}
+	document := common.FloraResponseToBson(body)
 
 	// Insert the document into the collection
 	_, err := s.collection.InsertOne(context.Background(), document)
 	if err != nil {
-		log.Printf("Failed to insert flora data into MongoDB: %v", err)
+		logger.LogError("Failed to insert flora data into MongoDB: " + err.Error())
 	} else {
-		log.Println("Flora data inserted into MongoDB successfully")
+		logger.LogInfo("Flora data inserted into MongoDB successfully")
 	}
 }
 
@@ -84,8 +87,8 @@ func (s *floraDumpService) saveFloraToDB(body map[string]interface{}) {
 func (s *floraDumpService) acknowledgeMessage(deliveryTag uint64) {
 	err := s.channel.Ack(deliveryTag, false)
 	if err != nil {
-		log.Printf("Failed to acknowledge message: %v", err)
+		logger.LogError("Failed to acknowledge message: " + err.Error())
 	} else {
-		log.Println("Message acknowledged successfully")
+		logger.LogInfo("Message acknowledged successfully")
 	}
 }

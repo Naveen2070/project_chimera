@@ -20,25 +20,25 @@ import (
 
 // FloraData represents the structure of the "values" field in your JSON
 type FloraData struct {
-	CommonName     string                 `bson:"common_name"`
-	ScientificName string                 `bson:"scientific_name"`
-	UserID         string                 `bson:"user_id"`
-	Type           string                 `bson:"type"`
-	Image          string                 `bson:"Image"`
-	Description    string                 `bson:"Description"`
-	Origin         string                 `bson:"Origin"`
-	OtherDetails   map[string]interface{} `bson:"OtherDetails"`
-	CreatedAt      time.Time              `bson:"createdAt"` // Automatically generated timestamp
+	CommonName     string                 `bson:"common_name" json:"common_name"`
+	ScientificName string                 `bson:"scientific_name" json:"scientific_name"`
+	UserID         string                 `bson:"user_id" json:"user_id"`
+	Type           string                 `bson:"type" json:"type"`
+	Image          string                 `bson:"image" json:"image"`
+	Description    string                 `bson:"description" json:"description"`
+	Origin         string                 `bson:"origin" json:"origin"`
+	OtherDetails   map[string]interface{} `bson:"other_details" json:"OtherDetails"`
+	CreatedAt      time.Time              `bson:"created_at" json:"createdAt"`
 }
 
-// FloraResponse represents the overall structure of the response
 type FloraResponse struct {
 	Data struct {
 		Code int `json:"code"`
 		Data struct {
 			Values FloraData `json:"values"`
+			Error  string    `json:"error"`
+			ID     string    `json:"id"`
 		} `json:"data"`
-		Error  string `json:"error"`
 		Status string `json:"status"`
 		Type   string `json:"type"`
 	} `json:"data"`
