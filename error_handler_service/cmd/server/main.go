@@ -44,6 +44,8 @@ func main() {
 	// MongoDB setup
 	db.ConnectDB()
 
+	collection := db.GetCollection("chimera_flora", "error_dump")
+
 	// Start Consul registration
 	consul.RegisterWithConsul()
 
@@ -62,7 +64,7 @@ func main() {
 
 	// Start consuming messages
 	log.Println("Starting RabbitMQ consumer...")
-	if err := dump.InitFloraDumpService(consumer); err != nil {
+	if err := dump.InitFloraDumpService(consumer, collection); err != nil {
 		log.Fatalf("Flora dump service failed to start: %v", err)
 	}
 

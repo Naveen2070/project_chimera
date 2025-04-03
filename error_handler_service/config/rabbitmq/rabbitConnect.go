@@ -65,6 +65,7 @@ func NewConsumer(queueName string, maxAttempts int, retryDelay time.Duration) (*
 				continue
 			}
 
+			// Declare the queue if not already declared
 			_, queueErr := ch.QueueDeclare(
 				queueName, true, false, false, false, nil,
 			)
@@ -89,11 +90,11 @@ func NewConsumer(queueName string, maxAttempts int, retryDelay time.Duration) (*
 }
 
 // Consume starts consuming messages, but processing is handled by the service
-func (c *Consumer) Consume(handler func(map[string]interface{})) error {
+func (c *Consumer) Consume(handler func(map[string]interface{}, uint64)) error {
 	msgs, err := c.channel.Consume(
 		c.queue,
-		"",
-		true,  // auto-ack
+		"",    // consumer tag
+		false, // auto-ack
 		false, // exclusive
 		false, // no-local
 		false, // no-wait
@@ -112,11 +113,22 @@ func (c *Consumer) Consume(handler func(map[string]interface{})) error {
 				log.Printf("Failed to unmarshal message: %v", err)
 				continue
 			}
-			handler(body)
+			// Pass the body and delivery tag to the handler
+			handler(body, msg.DeliveryTag)
 		}
 	}()
 
 	return nil
+}
+
+// Get the channel
+func (c *Consumer) GetChannel() *amqp.Channel {
+	return c.channel
+}
+
+// Get the connection
+func (c *Consumer) GetConnection() *amqp.Connection {
+	return c.conn
 }
 
 // Close cleans up RabbitMQ resources
@@ -127,4 +139,47 @@ func (c *Consumer) Close() {
 	if c.conn != nil {
 		c.conn.Close()
 	}
+}
+
+// SendMessage sends a message to a RabbitMQ queue, allowing dynamic queue names
+func (c *Consumer) SendMessage(queueName string, message map[string]interface{}) error {
+	// If channel is not available, return an error
+	if c.channel == nil {
+		return fmt.Errorf("channel is not open")
+	}
+
+	// If a queue name is provided, we declare that queue dynamically
+	if queueName != "" {
+		_, err := c.channel.QueueDeclare(
+			queueName, true, false, false, false, nil,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to declare queue %s: %v", queueName, err)
+		}
+	}
+
+	// Marshal the message to a JSON byte array
+	body, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("failed to marshal message: %v", err)
+	}
+
+	// Publish the message to the specified or default queue
+	err = c.channel.Publish(
+		"",        // exchange (empty means default)
+		queueName, // routing key (queue name)
+		false,     // mandatory
+		false,     // immediate
+		amqp.Publishing{
+			ContentType: "application/json",
+			Body:        body,
+		},
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to publish message: %v", err)
+	}
+
+	log.Printf("Message sent to queue %s", queueName)
+	return nil
 }

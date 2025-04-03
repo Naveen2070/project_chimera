@@ -189,7 +189,7 @@ func (c *RabbitMQClient) SendAckCommand(queueName string, cmd string, data inter
 	if err != nil {
 		return err
 	}
-	log.Println("Sent Ack-based command:", string(body))
+	log.Println("Sent Ack-based command:" + cmd)
 
 	err = c.channel.PublishWithContext(context.Background(),
 		"", queueName, false, false,

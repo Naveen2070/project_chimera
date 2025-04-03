@@ -32,6 +32,7 @@ export class FloraUpstreamService {
     private readonly prisma: PrismaService,
     @InjectModel(FloraMongo.name) private floraModel: Model<FloraMongo>,
     @Inject('NOTIFICATION_SERVICE') private readonly RmqClient: ClientProxy,
+    @Inject('ERROR_SERVICE') private readonly errClient: ClientProxy,
   ) {}
 
   async create(data: FloraUpstream): Promise<FloraUpstream | Error> {
@@ -68,7 +69,7 @@ export class FloraUpstreamService {
       });
 
       return result;
-    } catch (error) {
+    } catch (error: any) {
       // Rollback PostgreSQL changes if necessary
       if (id) {
         await this.prisma.flora.delete({
@@ -76,18 +77,34 @@ export class FloraUpstreamService {
         });
         console.log('PostgreSQL transaction rolled back.');
       }
-      const notification = this.RmqClient.emit(
+      this.RmqClient.emit(
         'flora-created',
         new NotificationResponse({
           type: 'POST',
           status: 'error',
           code: 500,
-          data: JSON.stringify(error),
+          data: error.message,
         }),
-      );
-      notification.subscribe(() => {
+      ).subscribe(() => {
         console.log('Notification sent successfully');
       });
+
+      this.errClient
+        .emit(
+          'flora.created',
+          new NotificationResponse({
+            type: 'POST',
+            status: 'error',
+            code: 500,
+            data: JSON.stringify({
+              values: JSON.stringify(data),
+              error: JSON.stringify(error.message),
+            }),
+          }),
+        )
+        .subscribe(() => {
+          console.log('Error dump sent successfully');
+        });
       console.log(error);
       throw error;
     }
@@ -132,7 +149,7 @@ export class FloraUpstreamService {
       );
 
       return updatedFlora;
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
       this.RmqClient.emit(
         'flora-updated',
@@ -140,9 +157,27 @@ export class FloraUpstreamService {
           type: 'PUT',
           status: 'error',
           code: 500,
-          data: JSON.stringify(error),
+          data: JSON.stringify({ id: id, values: JSON.stringify(data) }),
         }),
       );
+
+      this.errClient
+        .emit(
+          'flora.updated',
+          new NotificationResponse({
+            type: 'PUT',
+            status: 'error',
+            code: 500,
+            data: JSON.stringify({
+              values: JSON.stringify(data),
+              error: JSON.stringify(error.message),
+              id: id,
+            }),
+          }),
+        )
+        .subscribe(() => {
+          console.log('Error dump sent successfully');
+        });
       throw error;
     }
   }

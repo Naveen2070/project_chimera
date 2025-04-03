@@ -45,7 +45,6 @@ export class FloraUpstreamController {
       await this.floraUpstreamService.create(createFloraUpstreamDto);
     } catch (error) {
       console.log(error);
-      channel.nack(originalMsg);
     } finally {
       channel.ack(originalMsg);
     }
@@ -73,7 +72,6 @@ export class FloraUpstreamController {
       );
     } catch (error) {
       console.log(error);
-      channel.nack(originalMsg);
     } finally {
       channel.ack(originalMsg);
     }

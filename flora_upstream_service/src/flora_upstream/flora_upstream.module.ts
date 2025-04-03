@@ -23,6 +23,7 @@ import { RmqClientModule } from 'src/client/Rmq.client';
   imports: [
     MongooseModule.forFeature([{ name: Flora.name, schema: FloraSchema }]),
     RmqClientModule.register('notification', 'notification_queue'),
+    RmqClientModule.register('error', 'error_dump_queue'),
   ],
   controllers: [FloraUpstreamController],
   providers: [FloraUpstreamService, PrismaService],
