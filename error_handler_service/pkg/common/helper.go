@@ -2,6 +2,7 @@ package common
 
 import (
 	"project_chimera/error_handle_service/pkg/models"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -18,7 +19,7 @@ func FloraResponseToBson(body models.FloraResponse) bson.D {
 		{Key: "description", Value: floraData.Description},
 		{Key: "origin", Value: floraData.Origin},
 		{Key: "other_details", Value: floraData.OtherDetails},
-		{Key: "created_at", Value: floraData.CreatedAt},
+		{Key: "created_at", Value: time.Now().UTC()},
 
 		// Include additional metadata from FloraResponse
 		{Key: "status", Value: body.Data.Status},

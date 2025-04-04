@@ -159,7 +159,7 @@ export class FloraUpstreamService {
           type: 'PUT',
           status: 'error',
           code: 500,
-          data: JSON.stringify({ id: id, values: JSON.stringify(data) }),
+          data: `Failed to update ${id} check failed uploads`,
         }),
       );
 

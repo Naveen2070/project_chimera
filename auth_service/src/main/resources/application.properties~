@@ -5,7 +5,7 @@ logging.level.org.springframework.web=DEBUG
 logging.level.org.hibernate=ERROR
 
 # Server Config
-server.port=${SERVER_PORT:8081}
+server.port=8081
 
 # Consul Config
 # Tags to Identify the Service
