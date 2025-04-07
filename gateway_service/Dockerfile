@@ -38,4 +38,4 @@ ENTRYPOINT ["java", "-jar", "gateway-service.jar"]
 
 # Health check (optional but recommended for monitoring)
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-  CMD curl --fail http://localhost:8080/actuator/health || exit 1
+  CMD curl --fail http://host.docker.internal:8080/actuator/health || exit 1

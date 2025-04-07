@@ -15,6 +15,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -29,10 +30,25 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/getkin/kin-openapi/openapi2"
+	"github.com/getkin/kin-openapi/openapi2conv"
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/swagger"
 )
 
+// @title Error Handle Service API
+// @version 1.0.0
+// @description This API provides endpoints for error handler service which is a part of the project chimera.
+
+// @contact.name Naveen R
+// @contact.url https://naveen2070.github.io/portfolio
+// @contact.email naveenrameshcud@gmail.com
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
 func main() {
 	config.LoadConfig()
 
@@ -96,6 +112,72 @@ func main() {
 		customlogger.LogInfo("Graceful shutdown completed.")
 		os.Exit(0)
 	}()
+
+	// set up cross-origin resource sharing (CORS) middleware
+	app.Use(cors.New(
+		cors.Config{
+			AllowOrigins: "*",
+			AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
+			AllowHeaders: "Content-Type, Authorization",
+		},
+	))
+
+	// Serve Swagger JSON file (convert from Swagger 2.0 to OpenAPI 3.0)
+	app.Get("swagger/v1/swagger.json", func(c *fiber.Ctx) error {
+		// Read the Swagger 2.0 file
+		data, err := os.ReadFile("./docs/swagger.json")
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to read Swagger JSON")
+		}
+
+		// Unmarshal the JSON into an OpenAPI 2.0 structure
+		var doc openapi2.T
+		if err := json.Unmarshal(data, &doc); err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to parse Swagger JSON")
+		}
+
+		// Convert OpenAPI 2.0 to OpenAPI 3.0
+		openapi3Doc, err := openapi2conv.ToV3(&doc)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to convert to OpenAPI 3.0")
+		}
+
+		// add server info
+		openapi3Doc.Servers = []*openapi3.Server{
+			{
+				URL:         "http://localhost:5050",
+				Description: "Development Server",
+			}, {
+				URL:         "http://localhost:8080/error-handler/",
+				Description: "Gateway Server",
+			},
+		}
+
+		// add security info
+		openapi3Doc.Security = openapi3.SecurityRequirements{
+			{
+				"BearerAuth": []string{}, // Associates the BearerAuth with the endpoint
+			},
+		}
+		// Define SecuritySchemes
+		openapi3Doc.Components.SecuritySchemes = openapi3.SecuritySchemes{
+			"BearerAuth": &openapi3.SecuritySchemeRef{
+				Value: &openapi3.SecurityScheme{
+					Type:         "http",
+					Scheme:       "bearer",
+					BearerFormat: "JWT",
+				},
+			},
+		}
+
+		// Serve the OpenAPI 3.0 JSON response
+		return c.JSON(openapi3Doc)
+	})
+
+	// Serve Swagger UI route (Static assets)
+	app.Get("/swagger/*", swagger.New(swagger.Config{
+		URL: "/swagger/v1/swagger.json",
+	}))
 
 	// Routes
 	app.Get("/", func(c *fiber.Ctx) error {

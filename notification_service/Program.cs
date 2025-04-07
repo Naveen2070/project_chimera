@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using notification_service.Services.Interfaces;
 using notification_service.Services;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,7 +47,67 @@ builder.Services.AddSingleton<IConsulClient>(p => new ConsulClient(config =>
 
 // Add Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Chimera User Service",
+        Version = "1.0.0",
+        Description = "This API provides notification service for Chimera Application",
+        Contact = new OpenApiContact
+        {
+            Name = "Naveen R",
+            Email = "naveenrameshcud@gmail.com",
+            Url = new Uri("https://naveen2070.github.io/portfolio")
+        },
+        License = new OpenApiLicense
+        {
+            Name = "Apache 2.0",
+            Url = new Uri("https://www.apache.org/licenses/LICENSE-2.0")
+        }
+    });
+
+    c.AddServer(new OpenApiServer
+    {
+        Url = "http://localhost:5035", // Replace with actual service URL
+        Description = "Local User Service"
+    });
+
+    c.AddServer(new OpenApiServer
+    {
+        Url = "http://localhost:8080/notifications", // Adjust to match your API Gateway route
+        Description = "API Gateway"
+    });
+
+    // Add JWT Authentication to Swagger 
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter 'Bearer {token}' without quotes"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+
+    // Optional: Enable annotations if you use [SwaggerOperation], etc.
+    // c.EnableAnnotations();
+});
 
 // Add CORS policy
 builder.Services.AddCors(options =>
@@ -67,7 +128,10 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "User Service API v1");
+    });
 }
 
 // Get the lifetime of the application
@@ -78,13 +142,13 @@ IConsulClient consulClient = app.Services.GetRequiredService<IConsulClient>();
 
 // Generate a unique service ID
 string guid = Guid.NewGuid().ToString();
-string serviceId = "notification_service" + "-"  + guid.Split('-')[0]+ "-" + guid.Split('-')[2];
+string serviceId = "notification-service" + "-"  + guid.Split('-')[0]+ "-" + guid.Split('-')[2];
 
 // Register the service with Consul
 var registration = new AgentServiceRegistration
 {
     ID = serviceId,
-    Name = "notification_service",
+    Name = "notification-service",
     Address = "localhost",
     Port = 5249,
     Check = new AgentServiceCheck

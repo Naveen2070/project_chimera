@@ -50,6 +50,14 @@ public class GatewayServiceApplication {
 						.filters(f -> f
 								.stripPrefix(1))
 						.uri("lb://FLORA-DOWNSTREAM-SERVICE"))
+				.route("notification-service", r -> r.path("/notifications/**")
+						.filters(f -> f
+								.stripPrefix(1))
+						.uri("lb://NOTIFICATION-SERVICE"))
+				.route("error-handler-service", r -> r.path("/error-handler/**")
+						.filters(f -> f
+								.stripPrefix(1))
+						.uri("lb://ERROR-HANDLER-SERVICE"))
 				.build();
 	}
 

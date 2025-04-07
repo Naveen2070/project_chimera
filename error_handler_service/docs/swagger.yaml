@@ -1,0 +1,42 @@
+definitions:
+  common.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  common.SuccessResponse:
+    properties:
+      status:
+        type: string
+    type: object
+info:
+  contact:
+    email: naveenrameshcud@gmail.com
+    name: Naveen R
+    url: https://naveen2070.github.io/portfolio
+  description: This API provides endpoints for error handler service which is a part
+    of the project chimera.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Error Handle Service API
+  version: 1.0.0
+paths:
+  /actuator/health:
+    get:
+      description: Get actuator health status based on queue and RabbitMQ statuses
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.SuccessResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.ErrorResponse'
+      summary: Get actuator health status
+      tags:
+      - Actuator
+swagger: "2.0"
