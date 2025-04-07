@@ -6,6 +6,7 @@ USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
+EXPOSE 5035
 
 
 # This stage is used to build the service project
@@ -27,4 +28,6 @@ RUN dotnet publish "./user_service.csproj" -c $BUILD_CONFIGURATION -o /app/publi
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+# Set the port binding to what your app uses (5035)
+ENV ASPNETCORE_URLS=http://+:5035
 ENTRYPOINT ["dotnet", "user_service.dll"]

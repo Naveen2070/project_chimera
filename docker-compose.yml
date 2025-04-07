@@ -30,6 +30,32 @@ services:
     networks:
       - gateway-network
 
+  user-service:
+    build:
+      context: ./user_service
+    ports:
+      - "5035:5035"
+    environment:
+      ASPNETCORE_URLS: http://+:5035
+      ConnectionStrings__DefaultConnection: Host=host.docker.internal;Database=chimera_iam;Username=postgres;Password=naveen2007
+      Consul__Host: consul
+      Consul__Port: 8500
+      Consul__Scheme: http
+      Consul__Discovery__Enabled: "true"
+      Consul__Discovery__Register: "true"
+      Consul__Discovery__Deregister: "true"
+      Consul__Discovery__HostName: user-service
+      Consul__Discovery__Port: 5035
+      Consul__Discovery__ServiceName: user-service
+      Consul__Discovery__Heartbeat__Enabled: "true"
+      Consul__Discovery__Heartbeat__TtlValue: 15
+      Consul__Discovery__Heartbeat__TtlUnit: s
+    depends_on:
+      consul:
+        condition: service_healthy
+    networks:
+      - gateway-network
+
   consul:
     image: hashicorp/consul:latest
     container_name: consul
