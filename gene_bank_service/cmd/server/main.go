@@ -29,6 +29,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/swagger"
 
+	"project_chimera/gene_bank_service/config"
 	"project_chimera/gene_bank_service/internal/actuator"
 	"project_chimera/gene_bank_service/internal/consul"
 	"project_chimera/gene_bank_service/internal/flora"
@@ -46,8 +47,9 @@ import (
 // @license.name  Apache 2.0
 // @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
 func main() {
+	config.LoadConfig()
 	// Set up RabbitMQ client
-	rabbitURL := "amqp://admin:naveen@2007@localhost:5672"
+	rabbitURL := config.Env.RabbitMQurl
 	folraQueueName := "flora_upstream_queue"
 	floraDownstreamQueueName := "flora_downstream_queue"
 
@@ -184,7 +186,7 @@ func main() {
 	}()
 
 	// Start the Fiber server
-	if err := app.Listen(":5050"); err != nil {
+	if err := app.Listen(":" + config.Env.AppPort); err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}
 }

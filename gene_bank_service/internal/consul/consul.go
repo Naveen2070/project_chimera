@@ -27,7 +27,7 @@ import (
 func RegisterWithConsul() error {
 	// Setup Consul client
 	config := api.DefaultConfig()
-	config.Address = Config.ConsulHost + ":" + Config.ConsulPort
+	config.Address = Config.Env.ConsulHost + ":" + Config.Env.ConsulPort
 	client, err := api.NewClient(config)
 	if err != nil {
 		log.Fatalf("Error creating Consul client: %v", err)
@@ -35,16 +35,16 @@ func RegisterWithConsul() error {
 
 	// Service registration
 	registration := &api.AgentServiceRegistration{
-		Name:    Config.ServiceName,
-		Address: Config.ServiceHost,
-		Port:    Config.ServicePort,
+		Name:    Config.Env.ServiceName,
+		Address: Config.Env.ServiceHost,
+		Port:    Config.Env.ServicePort,
 		Tags:    []string{"fiber", "gene bank", "golang", "rabbitmq"},
 		Check: &api.AgentServiceCheck{
-			Status:                         Config.Status,
-			HTTP:                           "http://host.docker.internal:" + strconv.Itoa(Config.ServicePort) + "/actuator/health",
-			Interval:                       Config.Interval,
-			Timeout:                        Config.Timeout,
-			DeregisterCriticalServiceAfter: Config.DeregisterCriticalServiceAfter,
+			Status:                         Config.Env.Status,
+			HTTP:                           "http://host.docker.internal:" + strconv.Itoa(Config.Env.ServicePort) + "/actuator/health",
+			Interval:                       Config.Env.Interval,
+			Timeout:                        Config.Env.Timeout,
+			DeregisterCriticalServiceAfter: Config.Env.DeregisterCriticalServiceAfter,
 		},
 	}
 
@@ -55,7 +55,7 @@ func RegisterWithConsul() error {
 		return err
 	}
 
-	log.Printf("Service %s registered with Consul", Config.ServiceName)
+	log.Printf("Service %s registered with Consul", Config.Env.ServiceName)
 	return nil
 }
 
@@ -63,7 +63,7 @@ func RegisterWithConsul() error {
 func DeregisterFromConsul() error {
 	// Setup Consul client
 	config := api.DefaultConfig()
-	config.Address = Config.ConsulHost + ":" + Config.ConsulPort
+	config.Address = Config.Env.ConsulHost + ":" + Config.Env.ConsulPort
 	client, err := api.NewClient(config)
 	if err != nil {
 		log.Printf("Error creating Consul client: %v", err)
@@ -71,12 +71,12 @@ func DeregisterFromConsul() error {
 	}
 
 	// Deregister the service
-	err = client.Agent().ServiceDeregister(Config.ServiceName)
+	err = client.Agent().ServiceDeregister(Config.Env.ServiceName)
 	if err != nil {
 		log.Printf("Error deregistering service from Consul: %v", err)
 		return err
 	}
 
-	log.Printf("Service %s deregistered from Consul", Config.ServiceName)
+	log.Printf("Service %s deregistered from Consul", Config.Env.ServiceName)
 	return nil
 }
