@@ -38,6 +38,7 @@ services:
     ports:
       - "5035:5035"
     environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: http://+:5035
       ConnectionStrings__DefaultConnection: Host=host.docker.internal;Database=chimera_iam;Username=postgres;Password=naveen2007
       Consul__Host: consul
@@ -92,6 +93,28 @@ services:
       PORT: 3030
       RABBIT_MQ_URL: "amqp://admin:naveen@2007@host.docker.internal:5672"
       RABBIT_QUEUE_FLORA: "flora_upstream_queue"
+    depends_on:
+      consul:
+        condition: service_healthy
+    networks:
+      - gateway-network
+
+  flora-downstream-service:
+    build:
+      context: ./flora_downstream_service
+    ports:
+      - "8100:8100"
+    environment:
+      PYTHONUNBUFFERED: 1
+      PIP_NO_CACHE_DIR: "off"
+      ENVIRONMENT: "production"
+      CONSUL_HOST: "host.docker.internal"
+      CONSUL_PORT: 8500
+      APP_PORT: 8100
+      DATABASE_URL_MONGO: "mongodb://host.docker.internal:27017"
+      DATABASE_URL_POSTGRES: "postgresql+asyncpg://postgres:naveen2007@host.docker.internal:5432/chimera_flora"
+      RABBITMQ_URL: "amqp://admin:naveen@2007@host.docker.internal:5672"
+      QUEUE_NAME: "flora_downstream_queue"
     depends_on:
       consul:
         condition: service_healthy
