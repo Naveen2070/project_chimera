@@ -56,6 +56,29 @@ services:
     networks:
       - gateway-network
 
+  gene-bank-service:
+    build:
+      context: ./gene_bank_service
+    ports:
+      - "5050:5050"
+    environment:
+      CONSUL_HOST: "host.docker.internal"
+      CONSUL_PORT: "8500"
+      SERVICE_HOST: "host.docker.internal"
+      SERVICE_NAME: "gene-bank-service"
+      SERVICE_PORT: "5050"
+      STATUS: "passing"
+      INTERVAL: "15s"
+      TIMEOUT: "10s"
+      DEREGISTER_CRITICAL_SERVICE_AFTER: "5m"
+      APP_PORT: "5050"
+      RABBITMQ_URL: "amqp://admin:naveen@2007@host.docker.internal:5672"
+    depends_on:
+      consul:
+        condition: service_healthy
+    networks:
+      - gateway-network
+
   consul:
     image: hashicorp/consul:latest
     container_name: consul

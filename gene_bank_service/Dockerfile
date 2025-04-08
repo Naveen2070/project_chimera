@@ -7,7 +7,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod tidy
 
-# Copy only the necessary files
+# Copy the rest of the application
 COPY . ./
 
 # Install swag
@@ -27,20 +27,30 @@ WORKDIR /app/
 # Add a non-root user for security
 RUN adduser -D appuser
 
-# Copy the binary and other necessary files from the build stage
+# Copy the binary and Swagger docs from the build stage
 COPY --from=builder /main /app/main
 COPY --from=builder /app/docs /app/docs
 
-# Optionally, don't copy .env directly in production
-COPY .env /app/.env
+# Set environment variables
+ENV CONSUL_HOST=host.docker.internal \
+    CONSUL_PORT=8500 \
+    SERVICE_HOST=host.docker.internal \
+    SERVICE_NAME=gene-bank-service \
+    SERVICE_PORT=5050 \
+    STATUS=passing \
+    INTERVAL=15s \
+    TIMEOUT=10s \
+    DEREGISTER_CRITICAL_SERVICE_AFTER=5m \
+    APP_PORT=5050 \
+    RABBITMQ_URL=amqp://admin:naveen@2007@host.docker.internal:5672
 
-# Set permissions and ensure the correct ownership
-RUN chmod 600 /app/.env && chown appuser:appuser /app/main /app/.env /app/docs && \
-    chmod +x /app/main
+# Set permissions and ownership
+RUN chown appuser:appuser /app/main /app/docs && chmod +x /app/main
 
+# Expose the application port
 EXPOSE 5050
 
-# Switch to a non-root user for running the application
+# Switch to a non-root user
 USER appuser
 
 # Command to run the application

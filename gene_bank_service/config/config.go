@@ -40,9 +40,8 @@ var Env Config
 
 func LoadConfig() {
 	// Load .env file
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file" + err.Error())
+	if err := godotenv.Load(); err != nil {
+		log.Println(".env file not found, falling back to system environment variables")
 	}
 
 	servicePort, err := strconv.Atoi(os.Getenv("SERVICE_PORT"))
