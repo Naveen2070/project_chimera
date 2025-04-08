@@ -25,7 +25,7 @@ export class ConsulService implements OnModuleInit, BeforeApplicationShutdown {
 
   constructor() {
     this.consul = new Consul({
-      host: 'localhost',
+      host: 'host.docker.internal',
       port: 8500,
       secure: false,
     });
@@ -45,7 +45,7 @@ export class ConsulService implements OnModuleInit, BeforeApplicationShutdown {
     try {
       await this.consul.agent.service.register({
         name: this.serviceId,
-        address: 'localhost',
+        address: 'host.docker.internal',
         port: 3030,
         tags: ['rabbitmq', 'flora', 'upstream'],
         meta: {
