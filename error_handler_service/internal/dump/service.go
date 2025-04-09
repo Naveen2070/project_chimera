@@ -27,7 +27,7 @@ import (
 
 // FloraDumpService defines the interface for order processing
 type FloraDumpService interface {
-	ProcessOrderEvent(body []byte, deliveryTag uint64)
+	ProcessFloraDumpEvent(body []byte, deliveryTag uint64)
 }
 
 // floraDumpService is the concrete implementation of FloraDumpService
@@ -45,7 +45,7 @@ func NewFloraDumpService(channel *amqp091.Channel, collection *mongo.Collection)
 }
 
 // ProcessOrderEvent handles RabbitMQ messages for orders
-func (s *floraDumpService) ProcessOrderEvent(body []byte, deliveryTag uint64) {
+func (s *floraDumpService) ProcessFloraDumpEvent(body []byte, deliveryTag uint64) {
 	var floraResp models.FloraResponse
 
 	// Parse JSON into the FloraResponse struct

@@ -79,6 +79,16 @@ func LogError(message string) {
 	log.Println("[ERROR]", message)
 }
 
+// LogWarning writes warning logs to a daily logs/warning/YYYY-MM-DD.log
+func LogWarning(message string) {
+	warningLogFile := openLogFile(getLogFilePath("warning"))
+	defer warningLogFile.Close()
+
+	warningWriter := io.MultiWriter(os.Stdout, warningLogFile)
+	log.SetOutput(warningWriter)
+	log.Println("[WARNING]", message)
+}
+
 // LogFatal writes fatal logs to a daily logs/fatal/YYYY-MM-DD.log
 func LogFatal(message string) {
 	fatalLogFile := openLogFile(getLogFilePath("fatal"))

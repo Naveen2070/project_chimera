@@ -99,7 +99,7 @@ export class FloraUpstreamService {
             status: 'error',
             code: 500,
             data: JSON.stringify({
-              values: JSON.stringify(data),
+              values: data,
               error: JSON.stringify(error.message),
             }),
           }),
@@ -171,7 +171,7 @@ export class FloraUpstreamService {
             status: 'error',
             code: 500,
             data: JSON.stringify({
-              values: JSON.stringify(data),
+              values: data,
               error: JSON.stringify(error.message),
               id: id,
             }),
