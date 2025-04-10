@@ -61,7 +61,7 @@ export class FloraUpstreamService {
           type: 'POST',
           status: 'success',
           code: 201,
-          data: JSON.stringify(result.id),
+          data: { id: JSON.stringify(result.id) },
         }),
       );
       notification.subscribe(() => {
@@ -85,7 +85,7 @@ export class FloraUpstreamService {
           code: 500,
           message:
             'Please check the failed uploads for more details and fix the issue',
-          data: error.message,
+          data: { err: error.message },
         }),
       ).subscribe(() => {
         console.log('Notification sent successfully');
@@ -98,10 +98,10 @@ export class FloraUpstreamService {
             type: 'POST',
             status: 'error',
             code: 500,
-            data: JSON.stringify({
+            data: {
               values: data,
               error: JSON.stringify(error.message),
-            }),
+            },
           }),
         )
         .subscribe(() => {
@@ -146,7 +146,7 @@ export class FloraUpstreamService {
           type: 'PUT',
           status: 'success',
           code: 200,
-          data: JSON.stringify(updatedFlora.id),
+          data: { id: JSON.stringify(updatedFlora.id) },
         }),
       );
 
@@ -159,7 +159,7 @@ export class FloraUpstreamService {
           type: 'PUT',
           status: 'error',
           code: 500,
-          data: `Failed to update ${id} check failed uploads`,
+          data: { err: `Failed to update ${id} check failed uploads` },
         }),
       );
 

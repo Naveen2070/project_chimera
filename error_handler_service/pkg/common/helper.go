@@ -2,6 +2,7 @@ package common
 
 import (
 	"project_chimera/error_handle_service/pkg/models"
+	"regexp"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -28,4 +29,24 @@ func FloraResponseToBson(body models.FloraResponse) bson.D {
 		{Key: "response_type", Value: body.Data.Type},
 		{Key: "pattern", Value: body.Pattern},
 	}
+}
+
+// Function to extract field name from an error string
+func ExtractFieldNameFromError(errorString string) string {
+	// Define the regular expression pattern
+	fieldNamePattern := `Invalid value for argument \` + "`" + `(\w+)` + "`"
+
+	// Compile the regular expression
+	re := regexp.MustCompile(fieldNamePattern)
+
+	// Find the first match
+	match := re.FindStringSubmatch(errorString)
+
+	if len(match) > 1 {
+		// Return the captured field name (e.g., 'type')
+		return match[1]
+	}
+
+	// Return an empty string if no match is found
+	return ""
 }

@@ -17,6 +17,8 @@ package dump
 import (
 	"context"
 	"encoding/json"
+	"log"
+	"project_chimera/error_handle_service/internal/flora"
 	"project_chimera/error_handle_service/pkg/common"
 	logger "project_chimera/error_handle_service/pkg/logger"
 	"project_chimera/error_handle_service/pkg/models"
@@ -60,8 +62,18 @@ func (s *floraDumpService) ProcessFloraDumpEvent(body []byte, deliveryTag uint64
 	switch eventType {
 	case "flora.created":
 		logger.LogInfo("Processing flora.created event")
-		s.saveFloraToDB(floraResp)
-		s.acknowledgeMessage(deliveryTag)
+
+		res, err := flora.AutoFixFlora(floraResp)
+		if err != nil {
+			log.Printf("error: %v", err)
+			// s.saveFloraToDB(floraResp)
+			s.acknowledgeMessage(deliveryTag)
+			return
+		} else {
+			log.Printf("fixed flora data: %v", res)
+			s.acknowledgeMessage(deliveryTag)
+			return
+		}
 	case "flora.updated":
 		logger.LogInfo("Processing flora.updated event")
 		//TODO Handle flora update logic
@@ -90,5 +102,15 @@ func (s *floraDumpService) acknowledgeMessage(deliveryTag uint64) {
 		logger.LogError("Failed to acknowledge message: " + err.Error())
 	} else {
 		logger.LogInfo("Message acknowledged successfully")
+	}
+}
+
+// Method to reject the RabbitMQ message
+func (s *floraDumpService) rejectMessage(deliveryTag uint64) {
+	err := s.channel.Reject(deliveryTag, true)
+	if err != nil {
+		logger.LogError("Failed to reject message: " + err.Error())
+	} else {
+		logger.LogInfo("Message rejected successfully")
 	}
 }

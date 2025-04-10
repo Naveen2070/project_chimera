@@ -168,8 +168,7 @@ func (s *floraService) PutFlora(c *fiber.Ctx) error {
 	userId := c.Get("X-Auth-UserId")
 
 	if userId == "" {
-		userId = "testing-dev"
-		// return &fiber.Error{Code: fiber.StatusBadRequest, Message: "User ID not found in request"}
+		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "User ID not found in request"}
 	}
 
 	// Send Ack request
