@@ -20,7 +20,7 @@ RUN swag init --output ./docs --generalInfo ./cmd/server/main.go
 RUN go build -ldflags "-s -w" -o /main ./cmd/server/main.go
 
 # Stage 2: Final Image (Slimmer)
-FROM alpine:3.17.0
+FROM alpine:3.21.3
 
 WORKDIR /app/
 

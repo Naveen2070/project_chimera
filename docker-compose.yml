@@ -93,6 +93,8 @@ services:
       PORT: 3030
       RABBIT_MQ_URL: "amqp://admin:naveen@2007@host.docker.internal:5672"
       RABBIT_QUEUE_FLORA: "flora_upstream_queue"
+      CONSUL_HOST: "host.docker.internal"
+      CONSUL_PORT: 8500
     depends_on:
       consul:
         condition: service_healthy

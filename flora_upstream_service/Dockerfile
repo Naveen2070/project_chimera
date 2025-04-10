@@ -58,6 +58,8 @@ ENV DATABASE_URL_MONGO="mongodb://host.docker.internal:27017/chimera_flora"
 ENV PORT=3030
 ENV RABBIT_MQ_URL="amqp://admin:naveen@2007@host.docker.internal:5672"
 ENV RABBIT_QUEUE_FLORA="flora_upstream_queue"
+ENV CONSUL_HOST="host.docker.internal"
+ENV CONSUL_PORT=8500
 
 # Start the application, generate Prisma client before starting the app in production mode
 CMD ["sh", "-c", "npx prisma generate && npm run start:prod"]

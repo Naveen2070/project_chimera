@@ -16,17 +16,23 @@ import {
   OnModuleInit,
   BeforeApplicationShutdown,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import Consul from 'consul';
 
 @Injectable()
 export class ConsulService implements OnModuleInit, BeforeApplicationShutdown {
   private consul: Consul;
   private readonly serviceId = 'flora-upstream-service';
+  private readonly consul_host: string;
+  private readonly consul_port: number;
 
-  constructor() {
+  constructor(private readonly configService: ConfigService) {
+    this.consul_host =
+      this.configService.get<string>('CONSUL_HOST') || 'localhost';
+    this.consul_port = this.configService.get<number>('CONSUL_PORT') || 8500;
     this.consul = new Consul({
-      host: 'host.docker.internal',
-      port: 8500,
+      host: this.consul_host,
+      port: this.consul_port,
       secure: false,
     });
   }
