@@ -102,6 +102,9 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 	} else if payload.ImagePath != "" {
 		// If the image is provided via a local path, read it
 		imageBytes, err = utils.FetchImageFromPath(payload.ImagePath)
+	} else if payload.Image != nil {
+		// If the image is provided as a byte array, use it directly
+		imageBytes = payload.Image
 	} else {
 		// Handle case where there is no image provided
 		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "No image URL or path provided"}

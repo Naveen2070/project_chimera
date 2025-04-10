@@ -17,7 +17,6 @@ package dump
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"project_chimera/error_handle_service/internal/flora"
 	"project_chimera/error_handle_service/pkg/common"
 	logger "project_chimera/error_handle_service/pkg/logger"
@@ -65,12 +64,13 @@ func (s *floraDumpService) ProcessFloraDumpEvent(body []byte, deliveryTag uint64
 
 		res, err := flora.AutoFixFlora(floraResp)
 		if err != nil {
-			log.Printf("error: %v", err)
-			// s.saveFloraToDB(floraResp)
+			logger.LogError("Failed to fix flora data: " + err.Error() + " sending to error dump in db")
+			s.saveFloraToDB(floraResp)
 			s.acknowledgeMessage(deliveryTag)
 			return
 		} else {
-			log.Printf("fixed flora data: %v", res)
+			logger.LogInfo("Flora data fixed successfully and sending to upstream queue")
+			s.sendMessageToQueueIfExists("flora_upstream_queue", res.Data.Data.Values, "add_flora")
 			s.acknowledgeMessage(deliveryTag)
 			return
 		}
@@ -106,11 +106,60 @@ func (s *floraDumpService) acknowledgeMessage(deliveryTag uint64) {
 }
 
 // Method to reject the RabbitMQ message
-func (s *floraDumpService) rejectMessage(deliveryTag uint64) {
-	err := s.channel.Reject(deliveryTag, true)
+// func (s *floraDumpService) rejectMessage(deliveryTag uint64) {
+// 	err := s.channel.Reject(deliveryTag, true)
+// 	if err != nil {
+// 		logger.LogError("Failed to reject message: " + err.Error())
+// 	} else {
+// 		logger.LogInfo("Message rejected successfully")
+// 	}
+// }
+
+// Method to publish a message to a queue if it exists
+func (s *floraDumpService) sendMessageToQueueIfExists(queueName string, data models.FloraData, pattern string) {
+	message := map[string]interface{}{
+		"pattern": map[string]string{
+			"cmd": pattern,
+		},
+		"data": data,
+	}
+	// Marshal FloraData to JSON
+	messageBody, err := json.Marshal(message)
 	if err != nil {
-		logger.LogError("Failed to reject message: " + err.Error())
+		logger.LogError("Failed to marshal FloraData to JSON: " + err.Error())
+		return
+	}
+
+	// Try declaring the queue passively (it must already exist)
+	_, err = s.channel.QueueDeclarePassive(
+		queueName, // name
+		true,      // durable
+		false,     // delete when unused
+		false,     // exclusive
+		false,     // no-wait
+		nil,       // arguments
+	)
+
+	if err != nil {
+		logger.LogError("Queue does not exist or could not be declared passively: " + err.Error())
+		return
+	}
+
+	// Publish the message to the queue
+	err = s.channel.Publish(
+		"",        // exchange
+		queueName, // routing key (queue name)
+		false,     // mandatory
+		false,     // immediate
+		amqp091.Publishing{
+			ContentType: "application/json",
+			Body:        messageBody,
+		},
+	)
+
+	if err != nil {
+		logger.LogError("Failed to publish message to queue: " + err.Error())
 	} else {
-		logger.LogInfo("Message rejected successfully")
+		logger.LogInfo("Message published to queue: " + queueName)
 	}
 }

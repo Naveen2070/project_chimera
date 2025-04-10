@@ -52,6 +52,7 @@ type FloraRequest struct {
 	ScientificName string                 `json:"scientific_name,omitempty"` // Scientific name of the plant
 	ImageURL       string                 `json:"image_url,omitempty"`       // Image URL or file reference
 	ImagePath      string                 `json:"image_path,omitempty"`      // Image URL or file reference
+	Image          []byte                 `json:"image,omitempty"`           // Image data (bytes)
 	Description    string                 `json:"description,omitempty"`     // Description of the plant
 	Origin         string                 `json:"origin,omitempty"`          // Origin of the plant
 	OtherDetails   map[string]interface{} `json:"other_details,omitempty"`   // Additional details about the plant
