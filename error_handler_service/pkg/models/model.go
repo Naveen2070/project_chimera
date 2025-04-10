@@ -33,14 +33,14 @@ type FloraData struct {
 
 type FloraResponse struct {
 	Data struct {
-		Code int `json:"code"`
-		Data struct {
-			Values FloraData `json:"values"`
-			Error  string    `json:"error"`
-			ID     string    `json:"id"`
-		} `json:"data"`
+		Code   int    `json:"code"`
 		Status string `json:"status"`
 		Type   string `json:"type"`
+		Data   struct {
+			Values FloraData `json:"values"`
+			ID     string    `json:"id"`
+			Error  string    `json:"error"`
+		} `json:"data"`
 	} `json:"data"`
 	Pattern string `json:"pattern"`
 }

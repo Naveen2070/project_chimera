@@ -38,7 +38,7 @@ func NewFloraDumpHandler(service FloraDumpService) FloraDumpHandler {
 
 // ConsumeMessage processes incoming RabbitMQ messages for orders
 func (h *floraDumpHandler) ConsumeMessage(body []byte, deliveryTag uint64) {
-	h.service.ProcessOrderEvent(body, deliveryTag)
+	h.service.ProcessFloraDumpEvent(body, deliveryTag)
 }
 
 // InitOrderService initializes the order service consumer
