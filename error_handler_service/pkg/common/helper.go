@@ -3,6 +3,7 @@ package common
 import (
 	"project_chimera/error_handle_service/pkg/models"
 	"regexp"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -32,21 +33,31 @@ func FloraResponseToBson(body models.FloraResponse) bson.D {
 }
 
 // Function to extract field name from an error string
+// ExtractFieldNameFromError attempts to find the field name causing a Prisma error
 func ExtractFieldNameFromError(errorString string) string {
-	// Define the regular expression pattern
-	fieldNamePattern := `Invalid value for argument \` + "`" + `(\w+)` + "`"
-
-	// Compile the regular expression
-	re := regexp.MustCompile(fieldNamePattern)
-
-	// Find the first match
-	match := re.FindStringSubmatch(errorString)
-
+	// Try to find 'Invalid value for argument ...'
+	reMain := regexp.MustCompile(`(?i)Invalid value for argument [\` + "`" + `"']?(\w+)[\` + "`" + `"']?`)
+	match := reMain.FindStringSubmatch(errorString)
 	if len(match) > 1 {
-		// Return the captured field name (e.g., 'type')
 		return match[1]
 	}
 
-	// Return an empty string if no match is found
+	// Fallback: try to locate the line where the type/value mismatch occurs
+	lines := strings.Split(errorString, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasSuffix(line, "~") || strings.Contains(line, "~") {
+			// Try to extract field name from line
+			colonSplit := strings.Split(line, ":")
+			if len(colonSplit) > 0 {
+				fieldLine := strings.TrimSpace(colonSplit[0])
+				fieldParts := strings.Split(fieldLine, "\"")
+				if len(fieldParts) >= 2 {
+					return fieldParts[1] // e.g., `"type": ...` → "type"
+				}
+			}
+		}
+	}
+
 	return ""
 }
