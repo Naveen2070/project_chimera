@@ -1,79 +1,58 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import base64
-from io import BytesIO
-from PIL import Image
-import torch
-from torchvision import transforms
+from contextlib import asynccontextmanager
 import os
+import uuid
+import consul
+from dotenv import load_dotenv
+from fastapi import FastAPI
 
-app = FastAPI()
-
-# Define class names
-class_names = [
-    "daisy",
-    "dandelion",
-    "lotus",
-    "roses",
-    "sunflowers",
-    "tulips",
-]  # ⬅️ Update if needed
+from src.flora.router import flora_router
 
 
-# Define input model
-class ImagePayload(BaseModel):
-    image_base64: str
+load_dotenv()
+
+CONSUL_HOST = os.getenv("CONSUL_HOST", "localhost")
+CONSUL_PORT = int(os.getenv("CONSUL_PORT"))
+APP_PORT = int(os.getenv("APP_PORT"))
 
 
-# Define transform
-transform = transforms.Compose(
-    [
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ]
-)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    c = consul.Consul(host=CONSUL_HOST, port=CONSUL_PORT)
+    id = str(uuid.uuid4())
+    service_id = (
+        "classification-service" + "-" + id.split("-")[0] + "-" + id.split("-")[2]
+    )  # Generate a unique service ID
 
+    # Startup logic
+    c.agent.service.register(
+        name="classification-service",
+        service_id=service_id,
+        address="localhost",
+        port=APP_PORT,
+        check=consul.Check.http(
+            url="http://host.docker.internal:" + str(APP_PORT) + "/actuator/health",
+            interval="15s",
+            timeout="10s",
+            deregister="10s",
+        ),
+    )
+    print(f"Service {service_id} in port {APP_PORT} registered with Consul!")
 
-# Load latest scripted model
-def load_latest_model(model_dir="models"):
-    files = [
-        f
-        for f in os.listdir(model_dir)
-        if f.startswith("flora_model_script_v") and f.endswith(".pt")
-    ]
-    versions = [int(f.split("_v")[-1].split(".pt")[0]) for f in files]
-    if not versions:
-        raise RuntimeError("No model found.")
-
-    latest_version = max(versions)
-    model_path = os.path.join(model_dir, f"flora_model_script_v{latest_version}.pt")
-
-    model = torch.jit.load(model_path, map_location="cpu")
-    model.eval()
-    return model
-
-
-model = load_latest_model(model_dir="saved_models/flora/scripted/")
-
-
-# Convert Base64 to PIL image
-def decode_image(base64_str: str) -> Image.Image:
     try:
-        img_data = base64.b64decode(base64_str)
-        return Image.open(BytesIO(img_data)).convert("RGB")
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid image format")
+        # Yield control to the app
+        yield
+    finally:
+        # Shutdown logic
+        c.agent.service.deregister(service_id)
+        print(f"Service {service_id} deregistered from Consul!")
 
 
-@app.post("/predict")
-def predict(payload: ImagePayload):
-    image = decode_image(payload.image_base64)
-    input_tensor = transform(image).unsqueeze(0)  # Add batch dim
+app = FastAPI(lifespan=lifespan, openapi_url="/swagger/v1/openapi.json")
 
-    with torch.no_grad():
-        outputs = model(input_tensor)
-        _, predicted = torch.max(outputs, 1)
-        predicted_label = class_names[predicted.item()]
 
-    return {"prediction": predicted_label}
+app.include_router(flora_router)
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="localhost", port=APP_PORT)

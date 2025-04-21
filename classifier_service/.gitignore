@@ -2,3 +2,4 @@ dataset
 *.zip
 flower_data
 __pycache__
+.env
