@@ -11,6 +11,7 @@
 //		WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //		See the License for the specific language governing permissions and
 //		limitations under the License.
+
 package com.naveen_r_sam.auth_service.auth;
 
 import com.naveen_r_sam.auth_service.common.MessageSender;
@@ -28,6 +29,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class AuthService implements IAuthService {
@@ -52,22 +54,22 @@ public class AuthService implements IAuthService {
 
     public ResponseEntity<?> registerUser(SignUpDTO user) {
         if (user == null) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("data", "User cannot be null");
+
             ErrorDataDTO err = new ErrorDataDTO("user.signup",
                     new ErrorDataDTO.ResponseData(
                             400,
                             "Bad Request",
                             "POST",
-                            new HashMap<String, Object>() {{
-                                put("data", "User cannot be null");
-                            }}
+                            data
                     )
             );
-            this._messageSender.sendMessage(err);
+            this._messageSender.sendMessage(err.toString());
             return ResponseEntity.badRequest().body("User cannot be null");
         }
 
         Users newUser = new Users();
-
         newUser.setFirstName(user.getFirstName());
         newUser.setLastName(user.getLastName());
         newUser.setEmail(user.getEmail());
@@ -75,20 +77,13 @@ public class AuthService implements IAuthService {
         newUser.setPassword(_passwordEncoder.encode(user.getPassword()));
 
         Users savedUser = _usersRepository.save(newUser);
-        if(savedUser.getId() == null) {
-            ErrorDataDTO err = new ErrorDataDTO("user.signup",
-                    new ErrorDataDTO.ResponseData(
-                            500,
-                            "Internal Server Error",
-                            "POST",
-                            new HashMap<String, Object>() {{
-                                put("data", newUser);
-                            }}
-                    )
-            );
-            this._messageSender.sendMessage(err);
+        if (savedUser.getId() == null) {
+            ErrorDataDTO err = getErrorDTOWithUserData(user);
+
+            this._messageSender.sendMessage(err.toString());
             return ResponseEntity.internalServerError().body("User cannot be saved");
         }
+
         UsersDTO response = new UsersDTO(
                 savedUser.getId(),
                 savedUser.getFirstName(),
@@ -105,7 +100,6 @@ public class AuthService implements IAuthService {
     }
 
     public ResponseEntity<?> authenticateUser(LoginRequestDTO user) {
-
         try {
             Authentication authentication = _authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword())
@@ -113,18 +107,19 @@ public class AuthService implements IAuthService {
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
             if (!authentication.isAuthenticated()) {
+                Map<String, Object> data = new HashMap<>();
+                data.put("data", "Credentials not found (Wrong password)");
+
                 ErrorDataDTO err = new ErrorDataDTO(
                         "user.login",
                         new ErrorDataDTO.ResponseData(
                                 401,
                                 "Unauthorized",
                                 "POST",
-                                new HashMap<String, Object>(){{
-                                    put("data", "Credentials not found (Wrong password)");
-                                }}
+                                data
                         )
                 );
-                this._messageSender.sendMessage(err);
+                this._messageSender.sendMessage(err.toString());
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Credentials not found");
             }
             Users userData = _usersRepository.findByUsername(user.getUsername());
@@ -134,19 +129,39 @@ public class AuthService implements IAuthService {
             );
             return ResponseEntity.status(HttpStatus.OK).body(response);
         } catch (Exception ex) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("data", "Credentials not found");
+
             ErrorDataDTO err = new ErrorDataDTO(
                     "user.login",
                     new ErrorDataDTO.ResponseData(
                             401,
                             "Unauthorized",
                             "POST",
-                            new HashMap<String, Object>(){{
-                                put("data", "Credentials not found");
-                            }}
+                            data
                     )
             );
-            this._messageSender.sendMessage(err);
+            this._messageSender.sendMessage(err.toString());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Credentials not found");
         }
+    }
+
+    private static ErrorDataDTO getErrorDTOWithUserData(SignUpDTO user) {
+        Map<String, Object> data = new HashMap<>();
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("firstName", user.getFirstName());
+        userData.put("lastName", user.getLastName());
+        userData.put("email", user.getEmail());
+        userData.put("username", user.getUsername());
+        data.put("data", userData);
+
+        return new ErrorDataDTO("user.signup",
+                new ErrorDataDTO.ResponseData(
+                        500,
+                        "Internal Server Error",
+                        "POST",
+                        data
+                )
+        );
     }
 }

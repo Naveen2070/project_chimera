@@ -17,21 +17,40 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.Serializable;
+
 @Setter
 @Getter
 @AllArgsConstructor
-public class ErrorDataDTO {
-    // Getters and Setters
+public class ErrorDataDTO implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private String pattern;
     private ResponseData data;
 
     @Setter
     @Getter
     @AllArgsConstructor
-    public static class ResponseData {
+    public static class ResponseData implements Serializable {
+        private static final long serialVersionUID = 1L;
+
         private int code;
         private String status;
         private String type;
         private Object data;
+    }
+
+    @Override
+    public String toString() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            return objectMapper.writeValueAsString(this);
+        } catch (JsonProcessingException e) {
+            System.err.println("Failed to convert ErrorDataDTO to JSON: " + e.getMessage());
+            return super.toString();
+        }
     }
 }

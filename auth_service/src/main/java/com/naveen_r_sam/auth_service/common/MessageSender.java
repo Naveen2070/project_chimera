@@ -35,13 +35,13 @@ public class MessageSender {
     }
 
     // Send message to a specific queue
-    public void sendMessage(String queueName, Object message) {
+    public void sendMessage(String queueName, String message) {
         rabbitTemplate.convertAndSend(queueName, message);
         System.out.println("Message sent to queue [" + queueName + "]: " + message);
     }
 
     // Send message to the default queue
-    public void sendMessage(Object message) {
+    public void sendMessage(String message) {
         rabbitTemplate.convertAndSend(defaultQueue, message);
         System.out.println("Message sent to default queue [" + defaultQueue + "]: " + message);
     }
