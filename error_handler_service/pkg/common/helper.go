@@ -32,6 +32,21 @@ func FloraResponseToBson(body models.FloraResponse) bson.D {
 	}
 }
 
+func ErrorDataToBson(body models.ErrorDataDTO) bson.D {
+	// Extract the response data from the ErrorDataDTO
+	responseData := body.Data
+
+	// Create the BSON document
+	return bson.D{
+		{Key: "pattern", Value: body.Pattern},       // The pattern of the error
+		{Key: "code", Value: responseData.Code},     // Error code
+		{Key: "status", Value: responseData.Status}, // Error status
+		{Key: "type", Value: responseData.Type},     // Error type
+		{Key: "data", Value: responseData.Data},     // Error data (could be a message or any other relevant info)
+		{Key: "timestamp", Value: time.Now().UTC()}, // Timestamp when the error occurred
+	}
+}
+
 // Function to extract field name from an error string
 // ExtractFieldNameFromError attempts to find the field name causing a Prisma error
 func ExtractFieldNameFromError(errorString string) string {

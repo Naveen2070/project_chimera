@@ -17,6 +17,7 @@ package dump
 import (
 	"context"
 	"encoding/json"
+	"project_chimera/error_handle_service/config/db"
 	"project_chimera/error_handle_service/internal/flora"
 	"project_chimera/error_handle_service/pkg/common"
 	logger "project_chimera/error_handle_service/pkg/logger"
@@ -48,9 +49,17 @@ func NewFloraDumpService(channel *amqp091.Channel, collection *mongo.Collection)
 // ProcessOrderEvent handles RabbitMQ messages for orders
 func (s *floraDumpService) ProcessFloraDumpEvent(body []byte, deliveryTag uint64) {
 	var floraResp models.FloraResponse
+	var errResp models.ErrorDataDTO
 
 	// Parse JSON into the FloraResponse struct
 	err := json.Unmarshal(body, &floraResp)
+	if err != nil {
+		logger.LogError("Failed to parse message body: " + err.Error())
+		return
+	}
+
+	// Parse JSON into the ErrorDataDTO struct
+	err = json.Unmarshal(body, &errResp)
 	if err != nil {
 		logger.LogError("Failed to parse message body: " + err.Error())
 		return
@@ -78,6 +87,17 @@ func (s *floraDumpService) ProcessFloraDumpEvent(body []byte, deliveryTag uint64
 		logger.LogInfo("Processing flora.updated event")
 		//TODO Handle flora update logic
 		s.acknowledgeMessage(deliveryTag)
+		return
+	case "user.signup":
+		logger.LogInfo("Processing user.signup event")
+		//TODO Handle user signup logic
+		s.acknowledgeMessage(deliveryTag)
+		return
+	case "user.login":
+		logger.LogInfo("Processing user.login event")
+		s.saveToCustomCollection(errResp, "chimera_user", "error_dump")
+		s.acknowledgeMessage(deliveryTag)
+		return
 	}
 }
 
@@ -95,6 +115,18 @@ func (s *floraDumpService) saveFloraToDB(body models.FloraResponse) {
 	}
 }
 
+// method to insert in custom mongoDB collection
+func (s *floraDumpService) saveToCustomCollection(body models.ErrorDataDTO, dbName string, collectionName string) {
+	collection := db.GetCollection(dbName, collectionName)
+	document := common.ErrorDataToBson(body)
+	_, err := collection.InsertOne(context.Background(), document)
+	if err != nil {
+		logger.LogError("Failed to insert data into" + dbName + "." + collectionName + ": " + err.Error())
+	} else {
+		logger.LogInfo("Data inserted into" + dbName + "." + collectionName + " successfully")
+	}
+}
+
 // Method to acknowledge the RabbitMQ message
 func (s *floraDumpService) acknowledgeMessage(deliveryTag uint64) {
 	err := s.channel.Ack(deliveryTag, false)
@@ -106,14 +138,14 @@ func (s *floraDumpService) acknowledgeMessage(deliveryTag uint64) {
 }
 
 // Method to reject the RabbitMQ message
-// func (s *floraDumpService) rejectMessage(deliveryTag uint64) {
-// 	err := s.channel.Reject(deliveryTag, true)
-// 	if err != nil {
-// 		logger.LogError("Failed to reject message: " + err.Error())
-// 	} else {
-// 		logger.LogInfo("Message rejected successfully")
-// 	}
-// }
+func (s *floraDumpService) rejectMessage(deliveryTag uint64) {
+	err := s.channel.Reject(deliveryTag, true)
+	if err != nil {
+		logger.LogError("Failed to reject message: " + err.Error())
+	} else {
+		logger.LogInfo("Message rejected successfully")
+	}
+}
 
 // Method to publish a message to a queue if it exists
 func (s *floraDumpService) sendMessageToQueueIfExists(queueName string, data models.FloraData, pattern string) {

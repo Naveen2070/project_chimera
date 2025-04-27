@@ -44,3 +44,17 @@ type FloraResponse struct {
 	} `json:"data"`
 	Pattern string `json:"pattern"`
 }
+
+// ErrorDataDTO represents the error structure similar to the Java version
+type ErrorDataDTO struct {
+	Pattern string       `json:"pattern"`
+	Data    ResponseData `json:"data"`
+}
+
+// ResponseData represents the response data inside ErrorDataDTO
+type ResponseData struct {
+	Code   int         `json:"code"`
+	Status string      `json:"status"`
+	Type   string      `json:"type"`
+	Data   interface{} `json:"data"`
+}
