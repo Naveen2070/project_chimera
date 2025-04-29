@@ -55,7 +55,16 @@ namespace user_service.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var user = await _userService.CreateAsync(userCreateDto);
+            var user = new UserDTO();
+
+            try
+            {
+                user = await _userService.CreateAsync(userCreateDto);
+            }
+            catch (Exception ex)
+            { 
+                return BadRequest(ex.Message);
+            }
             return CreatedAtAction(nameof(GetUserById), new { id = user.Id }, user);
         }
 

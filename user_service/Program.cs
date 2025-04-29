@@ -26,6 +26,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddSingleton(new PasswordEncoder(12));
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddSingleton<IRMQPublisherService>(sp =>
+{
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    var service = RMQPublisherService.CreateAsync(configuration).GetAwaiter().GetResult();
+    return service;
+});
 builder.Services.AddControllers();
 
 // Add CORS configuration

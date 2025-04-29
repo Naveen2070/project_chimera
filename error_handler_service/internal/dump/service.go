@@ -107,6 +107,17 @@ func (s *floraDumpService) handleFloraEvents(floraResp models.FloraResponse, del
 // Method to handle user signup event
 func (s *floraDumpService) handleUserEvents(resp models.ErrorDataDTO, deliveryTag uint64) {
 	switch resp.Pattern {
+	case "user.create":
+		logger.LogInfo("Processing user.create event")
+		errorData, err := json.Marshal(resp.Data)
+		if err != nil {
+			logger.LogError("Failed to marshal user create error data: " + err.Error())
+		} else {
+			logger.LogError("User signup failed with error: " + string(errorData))
+		}
+		s.saveToCustomCollection(resp, "chimera_user", "error_dump")
+		s.acknowledgeMessage(deliveryTag)
+		return
 	case "user.signup":
 		logger.LogInfo("Processing user.signup event")
 		errorData, err := json.Marshal(resp.Data)

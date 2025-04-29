@@ -27,12 +27,14 @@ namespace user_service.Services
         private readonly DatabaseContext _context;
         private readonly IMapper _mapper;
         private readonly PasswordEncoder _passwordEncoder;
+        private readonly IRMQPublisherService _publisher;
 
-        public UserService(DatabaseContext context, IMapper mapper, PasswordEncoder passwordEncoder)
+        public UserService(DatabaseContext context, IMapper mapper, PasswordEncoder passwordEncoder, IRMQPublisherService publisher)
         {
             _context = context;
             _mapper = mapper;
             _passwordEncoder = passwordEncoder;
+            _publisher = publisher;
         }
 
         public async Task<UserDTO> CreateAsync(UserCreateDTO userCreateDto)
@@ -42,7 +44,39 @@ namespace user_service.Services
             user.Password = _passwordEncoder.Encode(user.Password);
 
             _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception e) { 
+                if(e.InnerException != null && e.InnerException.Message.Contains("unique constraint", StringComparison.OrdinalIgnoreCase))
+                {
+                    var error = ErrorDTO.CreateErrorDTO(
+                        pattern:"user.create",
+                         code: 400,
+                         type: "Post",
+                         status:"Bad Request",
+                         data: new
+                            {
+                              message = "User with email already exists."
+                            }
+                     );
+                    await _publisher.SendMessageAsync(error.ToString());
+                    throw new Exception("User with email already exists.");
+                }
+                var generalError = ErrorDTO.CreateErrorDTO(
+                        pattern: "user.create",
+                         code: 400,
+                         type: "Post",
+                         status: "Bad Request",
+                         data: new
+                         {
+                             message = e.ToString()
+                         }
+                     );
+                await _publisher.SendMessageAsync(generalError.ToString());
+                throw new Exception(e.Message);
+            }
             return _mapper.Map<UserDTO>(user);
         }
 
