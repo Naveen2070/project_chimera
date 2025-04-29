@@ -15,10 +15,14 @@
 package customlogger
 
 import (
+	"archive/zip"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -122,4 +126,92 @@ func openLogFile(filePath string) *os.File {
 		log.Fatalf("Failed to open log file %s: %v", filePath, err)
 	}
 	return file
+}
+
+const dateLayout = "2006-01-02"
+
+func ArchiveOldLogs() {
+	logTypes := []string{"info", "error", "warning", "fatal", "routes"}
+	cutoff := time.Now().AddDate(0, 0, -15)
+
+	for _, logType := range logTypes {
+		dir := filepath.Join("logs", logType)
+		archiveDir := filepath.Join(dir, "archive")
+		ensureDirectoryExists(archiveDir)
+
+		filesGrouped := make(map[string][]string)
+
+		_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+			if err != nil || info.IsDir() || !strings.HasSuffix(info.Name(), ".log") {
+				return nil
+			}
+
+			baseName := strings.TrimSuffix(info.Name(), ".log")
+			fileDate, err := time.Parse(dateLayout, baseName)
+			if err != nil || !fileDate.Before(cutoff) {
+				return nil
+			}
+
+			bucketStart := fileDate.AddDate(0, 0, -((fileDate.Day() - 1) % 15))
+			bucketEnd := bucketStart.AddDate(0, 0, 14)
+			rangeKey := fmt.Sprintf("%s-%s", bucketStart.Format("02-01-2006"), bucketEnd.Format("02-01-2006"))
+
+			filesGrouped[rangeKey] = append(filesGrouped[rangeKey], path)
+			return nil
+		})
+
+		for rangeKey, paths := range filesGrouped {
+			zipFilePath := filepath.Join(archiveDir, fmt.Sprintf("%s.zip", rangeKey))
+
+			err := zipFiles(zipFilePath, paths)
+			if err != nil {
+				LogError(fmt.Sprintf("Failed to zip logs for %s: %v", rangeKey, err))
+				continue
+			}
+
+			for _, f := range paths {
+				if err := os.Remove(f); err != nil {
+					LogWarning(fmt.Sprintf("Failed to remove original file %s: %v", f, err))
+				}
+			}
+			LogInfo(fmt.Sprintf("Archived logs to %s", zipFilePath))
+		}
+	}
+}
+
+func zipFiles(zipPath string, files []string) error {
+	newZipFile, err := os.Create(zipPath)
+	if err != nil {
+		return err
+	}
+	defer newZipFile.Close()
+
+	zipWriter := zip.NewWriter(newZipFile)
+	defer zipWriter.Close()
+
+	sort.Strings(files)
+
+	for _, file := range files {
+		if err := addFileToZip(zipWriter, file); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func addFileToZip(zipWriter *zip.Writer, filePath string) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, filename := filepath.Split(filePath)
+	writer, err := zipWriter.Create(filename)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(writer, file)
+	return err
 }

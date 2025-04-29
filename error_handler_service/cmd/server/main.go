@@ -52,6 +52,15 @@ import (
 func main() {
 	config.LoadConfig()
 
+	// Start background log archiver
+	go func() {
+		for {
+			customlogger.LogInfo("Running scheduled log archiver...")
+			customlogger.ArchiveOldLogs()
+			time.Sleep(24 * time.Hour)
+		}
+	}()
+
 	app := fiber.New()
 
 	// Logger setup
