@@ -53,21 +53,26 @@ public class AuthService implements IAuthService {
     }
 
     public ResponseEntity<?> registerUser(SignUpDTO user) {
-        if (user == null) {
-            Map<String, Object> data = new HashMap<>();
-            data.put("data", "User cannot be null");
+        if (user == null ||
+                user.getUsername() == null ||
+                user.getPassword() == null ||
+                user.getFirstName() == null ||
+                user.getLastName() == null ||
+                user.getEmail() == null) {
 
-            ErrorDataDTO err = new ErrorDataDTO("user.signup",
-                    new ErrorDataDTO.ResponseData(
-                            400,
-                            "Bad Request",
-                            "POST",
-                            data
-                    )
+            assert user != null;
+            ErrorDataDTO err = getErrorDTOWithUserData(
+                    user,
+                    "user.signup",
+                    400,
+                    "Bad Request",
+                    "POST"
+
             );
             this._messageSender.sendMessage(err.toString());
-            return ResponseEntity.badRequest().body("User cannot be null");
+            return ResponseEntity.badRequest().body("All fields must be provided and non-null");
         }
+
 
         Users newUser = new Users();
         newUser.setFirstName(user.getFirstName());
@@ -78,7 +83,13 @@ public class AuthService implements IAuthService {
 
         Users savedUser = _usersRepository.save(newUser);
         if (savedUser.getId() == null) {
-            ErrorDataDTO err = getErrorDTOWithUserData(user);
+            ErrorDataDTO err = getErrorDTOWithUserData(
+                    user,
+                    "user.signup",
+                    500,
+                    "Internal Server Error",
+                    "POST"
+            );
 
             this._messageSender.sendMessage(err.toString());
             return ResponseEntity.internalServerError().body("User cannot be saved");
@@ -146,7 +157,7 @@ public class AuthService implements IAuthService {
         }
     }
 
-    private static ErrorDataDTO getErrorDTOWithUserData(SignUpDTO user) {
+    private static ErrorDataDTO getErrorDTOWithUserData(SignUpDTO user, String pattern, int code, String status, String type) {
         Map<String, Object> data = new HashMap<>();
         Map<String, Object> userData = new HashMap<>();
         userData.put("firstName", user.getFirstName());
@@ -155,11 +166,11 @@ public class AuthService implements IAuthService {
         userData.put("username", user.getUsername());
         data.put("data", userData);
 
-        return new ErrorDataDTO("user.signup",
+        return new ErrorDataDTO(pattern,
                 new ErrorDataDTO.ResponseData(
-                        500,
-                        "Internal Server Error",
-                        "POST",
+                        code,
+                        status,
+                        type,
                         data
                 )
         );

@@ -22,6 +22,7 @@ import (
 	"project_chimera/error_handle_service/pkg/common"
 	logger "project_chimera/error_handle_service/pkg/logger"
 	"project_chimera/error_handle_service/pkg/models"
+	"strings"
 
 	"github.com/rabbitmq/amqp091-go"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -51,23 +52,32 @@ func (s *floraDumpService) ProcessFloraDumpEvent(body []byte, deliveryTag uint64
 	var floraResp models.FloraResponse
 	var errResp models.ErrorDataDTO
 
-	// Parse JSON into the FloraResponse struct
 	err := json.Unmarshal(body, &floraResp)
 	if err != nil {
-		logger.LogError("Failed to parse message body: " + err.Error())
+		logger.LogError("Failed to parse message body (FloraResponse): " + err.Error())
 		return
 	}
 
-	// Parse JSON into the ErrorDataDTO struct
 	err = json.Unmarshal(body, &errResp)
 	if err != nil {
-		logger.LogError("Failed to parse message body: " + err.Error())
+		logger.LogError("Failed to parse message body (ErrorDataDTO): " + err.Error())
 		return
 	}
 
-	eventType := floraResp.Pattern
+	switch {
+	case strings.HasPrefix(floraResp.Pattern, "flora."):
+		s.handleFloraEvents(floraResp, deliveryTag)
+	case strings.HasPrefix(floraResp.Pattern, "user."):
+		s.handleUserEvents(errResp, deliveryTag)
+	default:
+		logger.LogError("Unknown event type: " + floraResp.Pattern)
+		s.acknowledgeMessage(deliveryTag)
+	}
+}
 
-	switch eventType {
+// Method to handle flora events
+func (s *floraDumpService) handleFloraEvents(floraResp models.FloraResponse, deliveryTag uint64) {
+	switch floraResp.Pattern {
 	case "flora.created":
 		logger.LogInfo("Processing flora.created event")
 
@@ -88,16 +98,39 @@ func (s *floraDumpService) ProcessFloraDumpEvent(body []byte, deliveryTag uint64
 		//TODO Handle flora update logic
 		s.acknowledgeMessage(deliveryTag)
 		return
+	default:
+		logger.LogError("Unhandled flora event type: " + floraResp.Pattern)
+		s.acknowledgeMessage(deliveryTag)
+	}
+}
+
+// Method to handle user signup event
+func (s *floraDumpService) handleUserEvents(resp models.ErrorDataDTO, deliveryTag uint64) {
+	switch resp.Pattern {
 	case "user.signup":
 		logger.LogInfo("Processing user.signup event")
-		//TODO Handle user signup logic
+		errorData, err := json.Marshal(resp.Data)
+		if err != nil {
+			logger.LogError("Failed to marshal user signup error data: " + err.Error())
+		} else {
+			logger.LogError("User signup failed with error: " + string(errorData))
+		}
+		s.saveToCustomCollection(resp, "chimera_user", "error_dump")
 		s.acknowledgeMessage(deliveryTag)
 		return
 	case "user.login":
 		logger.LogInfo("Processing user.login event")
-		s.saveToCustomCollection(errResp, "chimera_user", "error_dump")
+		errorData, err := json.Marshal(resp.Data)
+		if err != nil {
+			logger.LogError("Failed to marshal user login error data: " + err.Error())
+		} else {
+			logger.LogError("User login failed with error: " + string(errorData))
+		}
 		s.acknowledgeMessage(deliveryTag)
 		return
+	default:
+		logger.LogError("Unhandled user event type: " + resp.Pattern)
+		s.acknowledgeMessage(deliveryTag)
 	}
 }
 
@@ -123,7 +156,7 @@ func (s *floraDumpService) saveToCustomCollection(body models.ErrorDataDTO, dbNa
 	if err != nil {
 		logger.LogError("Failed to insert data into" + dbName + "." + collectionName + ": " + err.Error())
 	} else {
-		logger.LogInfo("Data inserted into" + dbName + "." + collectionName + " successfully")
+		logger.LogInfo("Data inserted into " + dbName + "." + collectionName + " successfully")
 	}
 }
 
