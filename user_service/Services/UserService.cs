@@ -39,27 +39,30 @@ namespace user_service.Services
 
         public async Task<UserDTO> CreateAsync(UserCreateDTO userCreateDto)
         {
-            User user = _mapper.Map<User>(userCreateDto);
-
-            user.Password = _passwordEncoder.Encode(user.Password);
-
-            _context.Users.Add(user);
+            User user;
             try
             {
+                user = _mapper.Map<User>(userCreateDto);
+
+                user.Password = _passwordEncoder.Encode(user.Password);
+
+                _context.Users.Add(user);
+
                 await _context.SaveChangesAsync();
             }
-            catch (Exception e) { 
-                if(e.InnerException != null && e.InnerException.Message.Contains("unique constraint", StringComparison.OrdinalIgnoreCase))
+            catch (Exception e)
+            {
+                if (e.InnerException != null && e.InnerException.Message.Contains("unique constraint", StringComparison.OrdinalIgnoreCase))
                 {
                     var error = ErrorDTO.CreateErrorDTO(
-                        pattern:"user.create",
+                        pattern: "user.create",
                          code: 400,
                          type: "Post",
-                         status:"Bad Request",
+                         status: "Bad Request",
                          data: new
-                            {
-                              message = "User with email already exists."
-                            }
+                         {
+                             message = "User with email already exists."
+                         }
                      );
                     await _publisher.SendMessageAsync(error.ToString());
                     throw new Exception("User with email already exists.");
