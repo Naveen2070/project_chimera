@@ -107,38 +107,28 @@ func (s *floraDumpService) handleFloraEvents(floraResp models.FloraResponse, del
 // Method to handle user signup event
 func (s *floraDumpService) handleUserEvents(resp models.ErrorDataDTO, deliveryTag uint64) {
 	switch resp.Pattern {
-	case "user.create":
-		logger.LogInfo("Processing user.create event")
+	case "user.create", "user.signup", "user.login",
+		"user.delete", "user.softdelete",
+		"user.getall", "user.getbyid",
+		"user.update", "user.updatecredentials":
+
+		logger.LogInfo("Processing " + resp.Pattern + " event")
+
 		errorData, err := json.Marshal(resp.Data)
 		if err != nil {
-			logger.LogError("Failed to marshal user create error data: " + err.Error())
+			logger.LogError("Failed to marshal error data for " + resp.Pattern + ": " + err.Error())
 		} else {
-			logger.LogError("User signup failed with error: " + string(errorData))
+			logger.LogError(resp.Pattern + " failed with error: " + string(errorData))
 		}
-		s.saveToCustomCollection(resp, "chimera_user", "error_dump")
+
+		// Save only actual "error" events to the collection
+		if resp.Data.Status != "Success" {
+			s.saveToCustomCollection(resp, "chimera_user", "error_dump")
+		}
+
 		s.acknowledgeMessage(deliveryTag)
 		return
-	case "user.signup":
-		logger.LogInfo("Processing user.signup event")
-		errorData, err := json.Marshal(resp.Data)
-		if err != nil {
-			logger.LogError("Failed to marshal user signup error data: " + err.Error())
-		} else {
-			logger.LogError("User signup failed with error: " + string(errorData))
-		}
-		s.saveToCustomCollection(resp, "chimera_user", "error_dump")
-		s.acknowledgeMessage(deliveryTag)
-		return
-	case "user.login":
-		logger.LogInfo("Processing user.login event")
-		errorData, err := json.Marshal(resp.Data)
-		if err != nil {
-			logger.LogError("Failed to marshal user login error data: " + err.Error())
-		} else {
-			logger.LogError("User login failed with error: " + string(errorData))
-		}
-		s.acknowledgeMessage(deliveryTag)
-		return
+
 	default:
 		logger.LogError("Unhandled user event type: " + resp.Pattern)
 		s.acknowledgeMessage(deliveryTag)

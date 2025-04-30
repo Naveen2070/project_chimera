@@ -12,6 +12,7 @@
 //		See the License for the specific language governing permissions and
 //		limitations under the License.
 using AutoMapper;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using user_service.Database;
 using user_service.Entity.AuthService.Model;
@@ -88,50 +89,191 @@ namespace user_service.Services
             if (id == Guid.Empty)
                 return false;
 
-            User? user = await _context.Users.FindAsync(id);
-            if (user == null)
-                return false;
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
 
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
-            return true;
+                if (user == null)
+                {
+                    var notFound = ErrorDTO.CreateErrorDTO(
+                        pattern: "user.delete",
+                        code: 404,
+                        type: "Delete",
+                        status: "Not Found",
+                        data: new
+                        {
+                            message = "User with ID " + id + " not found."
+                        }
+                    );
+
+                    await _publisher.SendMessageAsync(notFound.ToString());
+                    return false;
+                }
+
+                _context.Users.Remove(user);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception e)
+            {
+                var error = ErrorDTO.CreateErrorDTO(
+                    pattern: "user.delete",
+                    code: 500,
+                    type: "Delete",
+                    status: "Internal Server Error",
+                    data: new
+                    {
+                        message = e.ToString()
+                    }
+                );
+
+                await _publisher.SendMessageAsync(error.ToString());
+                throw; 
+            }
         }
+
 
         public async Task<bool> SoftDeleteAsync(Guid id)
         {
             if (id == Guid.Empty)
                 return false;
 
-            User? user = await _context.Users.FindAsync(id);
-            if (user == null)
-                return false;
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
+                if (user == null)
+                {
+                    var notFound = ErrorDTO.CreateErrorDTO(
+                        pattern: "user.softdelete",
+                        code: 404,
+                        type: "SoftDelete",
+                        status: "Not Found",
+                        data: new { message = "User with ID " + id + " not found." }
+                    );
+                    await _publisher.SendMessageAsync(notFound.ToString());
+                    return false;
+                }
 
-            user.Status = UserStatus.Inactive;
-     
+                user.Status = UserStatus.Inactive;
+                await _context.SaveChangesAsync();
 
-            await _context.SaveChangesAsync();
-            return true;
+                var success = ErrorDTO.CreateErrorDTO(
+                    pattern: "user.softdelete",
+                    code: 200,
+                    type: "SoftDelete",
+                    status: "Success",
+                    data: new
+                    {
+                        message = $"User with ID {id} was soft-deleted.",
+                        userId = id
+                    }
+                );
+                await _publisher.SendMessageAsync(success.ToString());
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                var error = ErrorDTO.CreateErrorDTO(
+                    pattern: "user.softdelete",
+                    code: 500,
+                    type: "SoftDelete",
+                    status: "Internal Server Error",
+                    data: new { message = ex.ToString() }
+                );
+                await _publisher.SendMessageAsync(error.ToString());
+                throw;
+            }
         }
+
 
         public async Task<IEnumerable<UserDTO>> GetAllAsync()
         {
-            List<User> users = await _context.Users
-                .Where(u => u.Status == UserStatus.Active)
-                .ToListAsync();
+            try
+            {
+                var users = await _context.Users
+                    .Where(u => u.Status == UserStatus.Active)
+                    .ToListAsync();
 
-            return _mapper.Map<List<UserDTO>>(users);
+                var userDTOs = _mapper.Map<List<UserDTO>>(users);
+
+                var successMessage = ErrorDTO.CreateErrorDTO(
+                    pattern: "user.getall",
+                    code: 200,
+                    type: "GetAll",
+                    status: "Success",
+                    data: new
+                    {
+                        message = "Fetched all active users.",
+                        count = userDTOs.Count
+                    }
+                );
+                await _publisher.SendMessageAsync(successMessage.ToString());
+
+                return userDTOs;
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = ErrorDTO.CreateErrorDTO(
+                    pattern: "user.getall",
+                    code: 500,
+                    type: "GetAll",
+                    status: "Internal Server Error",
+                    data: new
+                    {
+                        message = ex.ToString()
+                    }
+                );
+                await _publisher.SendMessageAsync(errorMessage.ToString());
+                throw;
+            }
         }
+
 
         public async Task<UserDTO?> GetByIdAsync(Guid id)
         {
             if (id == Guid.Empty)
                 return null;
 
-            User? user = await _context.Users.FindAsync(id);
-            if (user == null)
-                return null;
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
+                if (user == null || user.Status != UserStatus.Active)
+                {
+                    var notFound = ErrorDTO.CreateErrorDTO(
+                        pattern: "user.getbyid",
+                        code: 404,
+                        type: "GetById",
+                        status: "Not Found",
+                        data: new { message = "User " + id + " not found." }
+                    );
+                    await _publisher.SendMessageAsync(notFound.ToString());
+                    return null;
+                }
 
-            return _mapper.Map<UserDTO>(user);
+                var success = ErrorDTO.CreateErrorDTO(
+                    pattern: "user.getbyid",
+                    code: 200,
+                    type: "GetById",
+                    status: "Success",
+                    data: new { message = "User retrieved.", userId = id }
+                );
+                await _publisher.SendMessageAsync(success.ToString());
+
+                return _mapper.Map<UserDTO>(user);
+            }
+            catch (Exception ex)
+            {
+                var error = ErrorDTO.CreateErrorDTO(
+                    pattern: "user.getbyid",
+                    code: 500,
+                    type: "GetById",
+                    status: "Internal Server Error",
+                    data: new { message = ex.ToString() }
+                );
+                await _publisher.SendMessageAsync(error.ToString());
+                throw;
+            }
         }
 
         public async Task<UserDTO?> UpdateAsync(Guid id, UserUpdateDTO userUpdateDto)
@@ -139,34 +281,99 @@ namespace user_service.Services
             if (id == Guid.Empty || userUpdateDto == null)
                 return null;
 
-            User? user = await _context.Users.FindAsync(id);
-            if (user == null)
-                return null;
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
+                if (user == null || user.Status != UserStatus.Active)
+                {
+                    var notFound = ErrorDTO.CreateErrorDTO(
+                        pattern: "user.update",
+                        code: 404,
+                        type: "Update",
+                        status: "Not Found",
+                        data: new { message = "User with ID " + id + " not found." }
+                    );
+                    await _publisher.SendMessageAsync(notFound.ToString());
+                    return null;
+                }
 
-            _mapper.Map(userUpdateDto, user);
-     
+                _mapper.Map(userUpdateDto, user);
+                await _context.SaveChangesAsync();
 
-            await _context.SaveChangesAsync();
+                var success = ErrorDTO.CreateErrorDTO(
+                    pattern: "user.update",
+                    code: 200,
+                    type: "Update",
+                    status: "Success",
+                    data: new { message = "User updated.", userId = id }
+                );
+                await _publisher.SendMessageAsync(success.ToString());
 
-            return _mapper.Map<UserDTO>(user);
+                return _mapper.Map<UserDTO>(user);
+            }
+            catch (Exception ex)
+            {
+                var error = ErrorDTO.CreateErrorDTO(
+                    pattern: "user.update",
+                    code: 500,
+                    type: "Update",
+                    status: "Internal Server Error",
+                    data: new { message = ex.ToString() }
+                );
+                await _publisher.SendMessageAsync(error.ToString());
+                throw;
+            }
         }
+
 
         public async Task<bool> UpdateCredentialsAsync(Guid id, UserCredentialsUpdateDTO credentialsUpdateDto)
         {
             if (id == Guid.Empty || credentialsUpdateDto == null)
                 return false;
 
-            User? user = await _context.Users.FindAsync(id);
-            if (user == null)
-                return false;
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
+                if (user == null || user.Status != UserStatus.Active)
+                {
+                    var notFound = ErrorDTO.CreateErrorDTO(
+                        pattern: "user.updatecredentials",
+                        code: 404,
+                        type: "UpdateCredentials",
+                        status: "Not Found",
+                        data: new { message = "User not with ID " + id + " found." }
+                    );
+                    await _publisher.SendMessageAsync(notFound.ToString());
+                    return false;
+                }
 
-            user.Password = _passwordEncoder.Encode(credentialsUpdateDto.NewPassword);
-     
+                user.Password = _passwordEncoder.Encode(credentialsUpdateDto.NewPassword);
+                await _context.SaveChangesAsync();
 
-            _context.Users.Update(user);
-            await _context.SaveChangesAsync();
+                var success = ErrorDTO.CreateErrorDTO(
+                    pattern: "user.updatecredentials",
+                    code: 200,
+                    type: "UpdateCredentials",
+                    status: "Success",
+                    data: new { message = "User credentials updated.", userId = id }
+                );
+                await _publisher.SendMessageAsync(success.ToString());
 
-            return true;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                var error = ErrorDTO.CreateErrorDTO(
+                    pattern: "user.updatecredentials",
+                    code: 500,
+                    type: "UpdateCredentials",
+                    status: "Internal Server Error",
+                    data: new { message = ex.ToString() }
+                );
+                await _publisher.SendMessageAsync(error.ToString());
+                throw;
+            }
         }
+
     }
 }
