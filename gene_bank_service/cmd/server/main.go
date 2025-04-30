@@ -52,6 +52,7 @@ func main() {
 	rabbitURL := config.Env.RabbitMQurl
 	folraQueueName := "flora_upstream_queue"
 	floraDownstreamQueueName := "flora_downstream_queue"
+	errorQueueName := "error_dump_queue"
 
 	rpcClient, err := rabbitmq.NewRabbitMQClient(rabbitURL)
 	if err != nil {
@@ -66,11 +67,13 @@ func main() {
 	// Create queue handler
 	FloraUpstreamQueueHandler := rabbitmq.NewQueueHandler(rpcClient, folraQueueName)
 	floraDownstreamQueueHandler := rabbitmq.NewQueueHandler(rpcClient, floraDownstreamQueueName)
+	errorQueueHandler := rabbitmq.NewQueueHandler(rpcClient, errorQueueName)
 
 	// List of RabbitMQ handlers
 	var rmqHandlers = []*rabbitmq.Handler{
 		FloraUpstreamQueueHandler,
 		floraDownstreamQueueHandler,
+		errorQueueHandler,
 	}
 
 	// Initialize the Fiber app
@@ -154,7 +157,7 @@ func main() {
 		return c.SendString("Hello, World!")
 	})
 	actuator.ActuatorRouter(actuatorGroup, rmqHandlers)
-	flora.FloraRouter(floraGroup, FloraUpstreamQueueHandler, floraDownstreamQueueHandler)
+	flora.FloraRouter(floraGroup, FloraUpstreamQueueHandler, floraDownstreamQueueHandler, errorQueueHandler)
 
 	// Logger setup
 	app.Use(logger.New(logger.Config{

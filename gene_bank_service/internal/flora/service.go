@@ -39,10 +39,12 @@ type floraService struct {
 	upStreamHandler *rabbitmq.Handler
 
 	downStreamHandler *rabbitmq.Handler
+
+	errorQueueHandler *rabbitmq.Handler
 }
 
-func NewFloraService(upStreamHandler *rabbitmq.Handler, downStreamHandler *rabbitmq.Handler) FloraService {
-	return &floraService{upStreamHandler: upStreamHandler, downStreamHandler: downStreamHandler}
+func NewFloraService(upStreamHandler *rabbitmq.Handler, downStreamHandler *rabbitmq.Handler, errorQueueHandler *rabbitmq.Handler) FloraService {
+	return &floraService{upStreamHandler: upStreamHandler, downStreamHandler: downStreamHandler, errorQueueHandler: errorQueueHandler}
 }
 
 // GetFlora handler for retrieving flora data
@@ -50,15 +52,44 @@ func (s *floraService) GetFlora(c *fiber.Ctx) (dto.FloraResponse, error) {
 	res, err := s.downStreamHandler.SendRequest(c, "get_all_floras", "")
 	if err != nil {
 		log.Printf("Error in SendRequest: %v", err)
+
+		data := map[string]interface{}{
+			"Code":   500,
+			"Status": "Internal Server Error",
+			"Type":   "GET",
+			"Data": map[string]interface{}{
+				"error": err.Error(),
+			},
+		}
+
+		s.errorQueueHandler.SendAckRequest(data, "flora.getall")
 		return dto.FloraResponse{}, err
 	}
 
 	if res.Code != utils.SUCCESS {
+		data := map[string]interface{}{
+			"Code":   res.Code,
+			"Status": res.Status,
+			"Type":   "GET",
+			"Data":   res.Data,
+		}
+
+		s.errorQueueHandler.SendAckRequest(data, "flora.getall")
 		return dto.FloraResponse{}, helpers.HandleRPCError(res)
 	}
 
 	floraList, err := helpers.ProcessFloraData(res.Data)
 	if err != nil {
+		data := map[string]interface{}{
+			"Code":   500,
+			"Status": "Internal Server Error",
+			"Type":   "GET",
+			"Data": map[string]interface{}{
+				"error": err.Error(),
+			},
+		}
+
+		s.errorQueueHandler.SendAckRequest(data, "flora.getall")
 		return dto.FloraResponse{}, err
 	}
 
@@ -68,16 +99,44 @@ func (s *floraService) GetFlora(c *fiber.Ctx) (dto.FloraResponse, error) {
 func (s *floraService) GetFloraById(c *fiber.Ctx) (dto.FloraResponse, error) {
 	res, err := s.downStreamHandler.SendRequest(c, "get_flora_by_id", c.Params("id"))
 	if err != nil {
+		data := map[string]interface{}{
+			"Code":   500,
+			"Status": "Internal Server Error",
+			"Type":   "GET",
+			"Data": map[string]interface{}{
+				"error": err.Error(),
+			},
+		}
+
+		s.errorQueueHandler.SendAckRequest(data, "flora.getbyid")
 		log.Printf("Error in SendRequest: %v", err)
 		return dto.FloraResponse{}, err
 	}
 
 	if res.Code != utils.SUCCESS {
+		data := map[string]interface{}{
+			"Code":   res.Code,
+			"Status": res.Status,
+			"Type":   "GET",
+			"Data":   res.Data,
+		}
+
+		s.errorQueueHandler.SendAckRequest(data, "flora.getbyid")
 		return dto.FloraResponse{}, helpers.HandleRPCError(res)
 	}
 
 	floraList, err := helpers.ProcessFloraData(res.Data)
 	if err != nil {
+		data := map[string]interface{}{
+			"Code":   500,
+			"Status": "Internal Server Error",
+			"Type":   "GET",
+			"Data": map[string]interface{}{
+				"error": err.Error(),
+			},
+		}
+
+		s.errorQueueHandler.SendAckRequest(data, "flora.getbyid")
 		return dto.FloraResponse{}, err
 	}
 
@@ -89,6 +148,16 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 	var payload dto.FloraRequest
 
 	if err := c.BodyParser(&payload); err != nil {
+		data := map[string]interface{}{
+			"Code":   400,
+			"Status": "Bad Request",
+			"Type":   "POST",
+			"Data": map[string]interface{}{
+				"error": err.Error(),
+			},
+		}
+
+		s.errorQueueHandler.SendAckRequest(data, "flora.post")
 		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "Invalid JSON"}
 	}
 
@@ -106,17 +175,47 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 		// If the image is provided as a byte array, use it directly
 		imageBytes = payload.Image
 	} else {
+		data := map[string]interface{}{
+			"Code":   400,
+			"Status": "Bad Request",
+			"Type":   "POST",
+			"Data": map[string]interface{}{
+				"error": "No image provided",
+			},
+		}
+
+		s.errorQueueHandler.SendAckRequest(data, "flora.post")
 		// Handle case where there is no image provided
 		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "No image URL or path provided"}
 	}
 
 	if err != nil {
+		data := map[string]interface{}{
+			"Code":   500,
+			"Status": "Internal Server Error",
+			"Type":   "POST",
+			"Data": map[string]interface{}{
+				"error": err.Error(),
+				"url":   payload.ImageURL,
+			},
+		}
+		s.errorQueueHandler.SendAckRequest(data, "flora.post")
 		return &fiber.Error{Code: fiber.StatusInternalServerError, Message: fmt.Sprintf("Error fetching image: %v", err)}
 	}
 
 	userId := c.Get("X-Auth-UserId")
 
 	if userId == "" {
+		data := map[string]interface{}{
+			"Code":   400,
+			"Status": "Bad Request",
+			"Type":   "POST",
+			"Data": map[string]interface{}{
+				"error": "User ID not found in request",
+			},
+		}
+
+		s.errorQueueHandler.SendAckRequest(data, "flora.post")
 		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "User ID not found in request"}
 	}
 
@@ -133,6 +232,16 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 	}
 	err = s.upStreamHandler.SendAckRequest(data, "add_flora")
 	if err != nil {
+		errData := map[string]interface{}{
+			"Code":   500,
+			"Status": "Internal Server Error",
+			"Type":   "POST",
+			"Data": map[string]interface{}{
+				"error": err.Error(),
+			},
+		}
+
+		s.errorQueueHandler.SendAckRequest(errData, "flora.post")
 		return err
 	}
 

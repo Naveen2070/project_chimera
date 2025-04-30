@@ -122,8 +122,8 @@ func (h *floraHandler) DeleteFlora(c *fiber.Ctx) error {
 }
 
 // FloraRouter sets up the routes for flora endpoints
-func FloraRouter(router fiber.Router, upStreamHandler *rabbitmq.Handler, downStreamHandler *rabbitmq.Handler) {
-	service := NewFloraService(upStreamHandler, downStreamHandler)
+func FloraRouter(router fiber.Router, upStreamHandler *rabbitmq.Handler, downStreamHandler *rabbitmq.Handler, errorQueueHandler *rabbitmq.Handler) {
+	service := NewFloraService(upStreamHandler, downStreamHandler, errorQueueHandler)
 	handler := NewFloraHandler(service)
 
 	router.Get("/", handler.GetFlora)
