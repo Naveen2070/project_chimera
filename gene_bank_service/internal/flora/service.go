@@ -54,10 +54,10 @@ func (s *floraService) GetFlora(c *fiber.Ctx) (dto.FloraResponse, error) {
 		log.Printf("Error in SendRequest: %v", err)
 
 		data := map[string]interface{}{
-			"Code":   500,
-			"Status": "Internal Server Error",
-			"Type":   "GET",
-			"Data": map[string]interface{}{
+			"code":   500,
+			"status": "Internal Server Error",
+			"type":   "GET",
+			"data": map[string]interface{}{
 				"error": err.Error(),
 			},
 		}
@@ -68,10 +68,10 @@ func (s *floraService) GetFlora(c *fiber.Ctx) (dto.FloraResponse, error) {
 
 	if res.Code != utils.SUCCESS {
 		data := map[string]interface{}{
-			"Code":   res.Code,
-			"Status": res.Status,
-			"Type":   "GET",
-			"Data":   res.Data,
+			"code":   res.Code,
+			"status": res.Status,
+			"type":   "GET",
+			"data":   res.Data,
 		}
 
 		s.errorQueueHandler.SendAckRequest(data, "flora.getall")
@@ -81,10 +81,10 @@ func (s *floraService) GetFlora(c *fiber.Ctx) (dto.FloraResponse, error) {
 	floraList, err := helpers.ProcessFloraData(res.Data)
 	if err != nil {
 		data := map[string]interface{}{
-			"Code":   500,
-			"Status": "Internal Server Error",
-			"Type":   "GET",
-			"Data": map[string]interface{}{
+			"code":   500,
+			"status": "Internal Server Error",
+			"type":   "GET",
+			"data": map[string]interface{}{
 				"error": err.Error(),
 			},
 		}
@@ -100,10 +100,10 @@ func (s *floraService) GetFloraById(c *fiber.Ctx) (dto.FloraResponse, error) {
 	res, err := s.downStreamHandler.SendRequest(c, "get_flora_by_id", c.Params("id"))
 	if err != nil {
 		data := map[string]interface{}{
-			"Code":   500,
-			"Status": "Internal Server Error",
-			"Type":   "GET",
-			"Data": map[string]interface{}{
+			"code":   500,
+			"status": "Internal Server Error",
+			"type":   "GET",
+			"data": map[string]interface{}{
 				"error": err.Error(),
 			},
 		}
@@ -115,10 +115,10 @@ func (s *floraService) GetFloraById(c *fiber.Ctx) (dto.FloraResponse, error) {
 
 	if res.Code != utils.SUCCESS {
 		data := map[string]interface{}{
-			"Code":   res.Code,
-			"Status": res.Status,
-			"Type":   "GET",
-			"Data":   res.Data,
+			"code":   res.Code,
+			"status": res.Status,
+			"type":   "GET",
+			"data":   res.Data,
 		}
 
 		s.errorQueueHandler.SendAckRequest(data, "flora.getbyid")
@@ -128,10 +128,10 @@ func (s *floraService) GetFloraById(c *fiber.Ctx) (dto.FloraResponse, error) {
 	floraList, err := helpers.ProcessFloraData(res.Data)
 	if err != nil {
 		data := map[string]interface{}{
-			"Code":   500,
-			"Status": "Internal Server Error",
-			"Type":   "GET",
-			"Data": map[string]interface{}{
+			"code":   500,
+			"status": "Internal Server Error",
+			"type":   "GET",
+			"data": map[string]interface{}{
 				"error": err.Error(),
 			},
 		}
@@ -149,10 +149,10 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&payload); err != nil {
 		data := map[string]interface{}{
-			"Code":   400,
-			"Status": "Bad Request",
-			"Type":   "POST",
-			"Data": map[string]interface{}{
+			"code":   400,
+			"status": "Bad Request",
+			"type":   "POST",
+			"data": map[string]interface{}{
 				"error": err.Error(),
 			},
 		}
@@ -176,10 +176,10 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 		imageBytes = payload.Image
 	} else {
 		data := map[string]interface{}{
-			"Code":   400,
-			"Status": "Bad Request",
-			"Type":   "POST",
-			"Data": map[string]interface{}{
+			"code":   400,
+			"status": "Bad Request",
+			"type":   "POST",
+			"data": map[string]interface{}{
 				"error": "No image provided",
 			},
 		}
@@ -191,10 +191,10 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 
 	if err != nil {
 		data := map[string]interface{}{
-			"Code":   500,
-			"Status": "Internal Server Error",
-			"Type":   "POST",
-			"Data": map[string]interface{}{
+			"code":   500,
+			"status": "Internal Server Error",
+			"type":   "POST",
+			"data": map[string]interface{}{
 				"error": err.Error(),
 				"url":   payload.ImageURL,
 			},
@@ -207,10 +207,10 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 
 	if userId == "" {
 		data := map[string]interface{}{
-			"Code":   400,
-			"Status": "Bad Request",
-			"Type":   "POST",
-			"Data": map[string]interface{}{
+			"code":   400,
+			"status": "Bad Request",
+			"type":   "POST",
+			"data": map[string]interface{}{
 				"error": "User ID not found in request",
 			},
 		}
@@ -227,16 +227,16 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 		"Description":    payload.Description,
 		"Origin":         payload.Origin,
 		"OtherDetails":   payload.OtherDetails,
-		"Type":           payload.Type,
+		"type":           payload.Type,
 		"UserId":         userId,
 	}
 	err = s.upStreamHandler.SendAckRequest(data, "add_flora")
 	if err != nil {
 		errData := map[string]interface{}{
-			"Code":   500,
-			"Status": "Internal Server Error",
-			"Type":   "POST",
-			"Data": map[string]interface{}{
+			"code":   500,
+			"status": "Internal Server Error",
+			"type":   "POST",
+			"data": map[string]interface{}{
 				"error": err.Error(),
 			},
 		}
@@ -253,6 +253,16 @@ func (s *floraService) PutFlora(c *fiber.Ctx) error {
 	var payload dto.FloraUpdateRequest
 
 	if err := c.BodyParser(&payload); err != nil {
+		data := map[string]interface{}{
+			"code":   400,
+			"status": "Bad Request",
+			"type":   "PUT",
+			"data": map[string]interface{}{
+				"error": err.Error(),
+			},
+		}
+
+		s.errorQueueHandler.SendAckRequest(data, "flora.put")
 		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "Invalid JSON"}
 	}
 
@@ -270,16 +280,47 @@ func (s *floraService) PutFlora(c *fiber.Ctx) error {
 		imageBytes = payload.Image
 	} else {
 		// Handle case where there is no image provided
+		data := map[string]interface{}{
+			"code":   400,
+			"status": "Bad Request",
+			"type":   "PUT",
+			"data": map[string]interface{}{
+				"error": "No image provided",
+			},
+		}
+
+		s.errorQueueHandler.SendAckRequest(data, "flora.put")
 		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "No image URL or path provided"}
 	}
 
 	if err != nil {
+		data := map[string]interface{}{
+			"code":   500,
+			"status": "Internal Server Error",
+			"type":   "PUT",
+			"data": map[string]interface{}{
+				"error": err.Error(),
+				"url":   payload.ImageURL,
+			},
+		}
+
+		s.errorQueueHandler.SendAckRequest(data, "flora.put")
 		return &fiber.Error{Code: fiber.StatusInternalServerError, Message: fmt.Sprintf("Error fetching image: %v", err)}
 	}
 
 	userId := c.Get("X-Auth-UserId")
 
 	if userId == "" {
+		data := map[string]interface{}{
+			"code":   400,
+			"status": "Bad Request",
+			"type":   "PUT",
+			"data": map[string]interface{}{
+				"error": "User ID not found in request",
+			},
+		}
+
+		s.errorQueueHandler.SendAckRequest(data, "flora.put")
 		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "User ID not found in request"}
 	}
 
@@ -287,6 +328,16 @@ func (s *floraService) PutFlora(c *fiber.Ctx) error {
 	data := utils.CreateFloraDataMap(payload, userId, imageBytes)
 	err = s.upStreamHandler.SendAckRequest(data, "update_flora")
 	if err != nil {
+		errData := map[string]interface{}{
+			"code":   500,
+			"status": "Internal Server Error",
+			"type":   "PUT",
+			"data": map[string]interface{}{
+				"error": err.Error(),
+			},
+		}
+
+		s.errorQueueHandler.SendAckRequest(errData, "flora.put")
 		return err
 	}
 
