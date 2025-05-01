@@ -62,7 +62,7 @@ func (s *floraService) GetFlora(c *fiber.Ctx) (dto.FloraResponse, error) {
 			},
 		}
 
-		s.errorQueueHandler.SendAckRequest(data, "flora.getall")
+		s.errorQueueHandler.SendAckRequest(data, "flora.getall", true)
 		return dto.FloraResponse{}, err
 	}
 
@@ -74,7 +74,7 @@ func (s *floraService) GetFlora(c *fiber.Ctx) (dto.FloraResponse, error) {
 			"data":   res.Data,
 		}
 
-		s.errorQueueHandler.SendAckRequest(data, "flora.getall")
+		s.errorQueueHandler.SendAckRequest(data, "flora.getall", true)
 		return dto.FloraResponse{}, helpers.HandleRPCError(res)
 	}
 
@@ -89,7 +89,7 @@ func (s *floraService) GetFlora(c *fiber.Ctx) (dto.FloraResponse, error) {
 			},
 		}
 
-		s.errorQueueHandler.SendAckRequest(data, "flora.getall")
+		s.errorQueueHandler.SendAckRequest(data, "flora.getall", true)
 		return dto.FloraResponse{}, err
 	}
 
@@ -108,7 +108,7 @@ func (s *floraService) GetFloraById(c *fiber.Ctx) (dto.FloraResponse, error) {
 			},
 		}
 
-		s.errorQueueHandler.SendAckRequest(data, "flora.getbyid")
+		s.errorQueueHandler.SendAckRequest(data, "flora.getbyid", true)
 		log.Printf("Error in SendRequest: %v", err)
 		return dto.FloraResponse{}, err
 	}
@@ -121,7 +121,7 @@ func (s *floraService) GetFloraById(c *fiber.Ctx) (dto.FloraResponse, error) {
 			"data":   res.Data,
 		}
 
-		s.errorQueueHandler.SendAckRequest(data, "flora.getbyid")
+		s.errorQueueHandler.SendAckRequest(data, "flora.getbyid", true)
 		return dto.FloraResponse{}, helpers.HandleRPCError(res)
 	}
 
@@ -136,7 +136,7 @@ func (s *floraService) GetFloraById(c *fiber.Ctx) (dto.FloraResponse, error) {
 			},
 		}
 
-		s.errorQueueHandler.SendAckRequest(data, "flora.getbyid")
+		s.errorQueueHandler.SendAckRequest(data, "flora.getbyid", true)
 		return dto.FloraResponse{}, err
 	}
 
@@ -157,7 +157,7 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 			},
 		}
 
-		s.errorQueueHandler.SendAckRequest(data, "flora.post")
+		s.errorQueueHandler.SendAckRequest(data, "flora.post", true)
 		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "Invalid JSON"}
 	}
 
@@ -184,7 +184,7 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 			},
 		}
 
-		s.errorQueueHandler.SendAckRequest(data, "flora.post")
+		s.errorQueueHandler.SendAckRequest(data, "flora.post", true)
 		// Handle case where there is no image provided
 		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "No image URL or path provided"}
 	}
@@ -199,7 +199,7 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 				"url":   payload.ImageURL,
 			},
 		}
-		s.errorQueueHandler.SendAckRequest(data, "flora.post")
+		s.errorQueueHandler.SendAckRequest(data, "flora.post", true)
 		return &fiber.Error{Code: fiber.StatusInternalServerError, Message: fmt.Sprintf("Error fetching image: %v", err)}
 	}
 
@@ -215,7 +215,7 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 			},
 		}
 
-		s.errorQueueHandler.SendAckRequest(data, "flora.post")
+		s.errorQueueHandler.SendAckRequest(data, "flora.post", true)
 		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "User ID not found in request"}
 	}
 
@@ -230,7 +230,7 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 		"type":           payload.Type,
 		"UserId":         userId,
 	}
-	err = s.upStreamHandler.SendAckRequest(data, "add_flora")
+	err = s.upStreamHandler.SendAckRequest(data, "add_flora", false)
 	if err != nil {
 		errData := map[string]interface{}{
 			"code":   500,
@@ -241,7 +241,7 @@ func (s *floraService) PostFlora(c *fiber.Ctx) error {
 			},
 		}
 
-		s.errorQueueHandler.SendAckRequest(errData, "flora.post")
+		s.errorQueueHandler.SendAckRequest(errData, "flora.post", true)
 		return err
 	}
 
@@ -262,7 +262,7 @@ func (s *floraService) PutFlora(c *fiber.Ctx) error {
 			},
 		}
 
-		s.errorQueueHandler.SendAckRequest(data, "flora.put")
+		s.errorQueueHandler.SendAckRequest(data, "flora.put", true)
 		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "Invalid JSON"}
 	}
 
@@ -289,7 +289,7 @@ func (s *floraService) PutFlora(c *fiber.Ctx) error {
 			},
 		}
 
-		s.errorQueueHandler.SendAckRequest(data, "flora.put")
+		s.errorQueueHandler.SendAckRequest(data, "flora.put", true)
 		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "No image URL or path provided"}
 	}
 
@@ -304,7 +304,7 @@ func (s *floraService) PutFlora(c *fiber.Ctx) error {
 			},
 		}
 
-		s.errorQueueHandler.SendAckRequest(data, "flora.put")
+		s.errorQueueHandler.SendAckRequest(data, "flora.put", true)
 		return &fiber.Error{Code: fiber.StatusInternalServerError, Message: fmt.Sprintf("Error fetching image: %v", err)}
 	}
 
@@ -320,13 +320,13 @@ func (s *floraService) PutFlora(c *fiber.Ctx) error {
 			},
 		}
 
-		s.errorQueueHandler.SendAckRequest(data, "flora.put")
+		s.errorQueueHandler.SendAckRequest(data, "flora.put", true)
 		return &fiber.Error{Code: fiber.StatusBadRequest, Message: "User ID not found in request"}
 	}
 
 	// Send Ack request
 	data := utils.CreateFloraDataMap(payload, userId, imageBytes)
-	err = s.upStreamHandler.SendAckRequest(data, "update_flora")
+	err = s.upStreamHandler.SendAckRequest(data, "update_flora", false)
 	if err != nil {
 		errData := map[string]interface{}{
 			"code":   500,
@@ -337,7 +337,7 @@ func (s *floraService) PutFlora(c *fiber.Ctx) error {
 			},
 		}
 
-		s.errorQueueHandler.SendAckRequest(errData, "flora.put")
+		s.errorQueueHandler.SendAckRequest(errData, "flora.put", true)
 		return err
 	}
 

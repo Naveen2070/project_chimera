@@ -78,6 +78,11 @@ func (s *floraDumpService) ProcessFloraDumpEvent(body []byte, deliveryTag uint64
 // Method to handle flora events
 func (s *floraDumpService) handleFloraEvents(floraResp models.FloraResponse, deliveryTag uint64) {
 	switch floraResp.Pattern {
+	case "flora.getall", "getbyid":
+		logger.LogInfo("Processing flora.getall/getbyid event")
+		s.saveFloraToDB(floraResp)
+		s.acknowledgeMessage(deliveryTag)
+		return
 	case "flora.created":
 		logger.LogInfo("Processing flora.created event")
 
@@ -95,7 +100,12 @@ func (s *floraDumpService) handleFloraEvents(floraResp models.FloraResponse, del
 		}
 	case "flora.updated":
 		logger.LogInfo("Processing flora.updated event")
-		//TODO Handle flora update logic
+		s.saveFloraToDB(floraResp)
+		s.acknowledgeMessage(deliveryTag)
+		return
+	case "flora.deleted":
+		logger.LogInfo("Processing flora.deleted event")
+		s.saveFloraToDB(floraResp)
 		s.acknowledgeMessage(deliveryTag)
 		return
 	default:

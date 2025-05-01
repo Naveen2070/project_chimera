@@ -48,10 +48,10 @@ func (h *Handler) SendRequest(c *fiber.Ctx, cmd string, param string) (common.Me
 }
 
 // SendAckRequest handles HTTP requests and sends an Ack-based command to RabbitMQ
-func (h *Handler) SendAckRequest(data map[string]interface{}, cmd string) error {
+func (h *Handler) SendAckRequest(data map[string]interface{}, cmd string, isEvent bool) error {
 
 	log.Printf("Received request for Ack-based command: %s", cmd)
-	err := h.rpcClient.SendAckCommand(h.queueName, cmd, data)
+	err := h.rpcClient.SendAckCommand(h.queueName, cmd, data, isEvent)
 	if err != nil {
 		return &fiber.Error{Code: fiber.StatusInternalServerError, Message: "Failed to send command"}
 	}
