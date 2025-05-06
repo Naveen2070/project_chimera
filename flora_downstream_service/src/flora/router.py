@@ -12,12 +12,12 @@
 # 		See the License for the specific language governing permissions and
 # 		limitations under the License.
 
-from fastapi import HTTPException, Depends
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.postgres.postgres_connect import SessionLocal
 from src.flora.service import get_floras, get_flora
 from src.model.common import ApiResponse
-from src.model.flora import Flora
+from src.queue.rabbit_consumer import RpcConsumer
 
 
 # Dependency to get the database session
@@ -27,7 +27,9 @@ async def get_db():
 
 
 # Handler for processing requests based on the command
-async def process_request(cmd: str, db: AsyncSession, data: dict = None) -> ApiResponse:
+async def process_request(
+    cmd: str, db: AsyncSession, data: dict = None, rpc_consumer: RpcConsumer = None
+) -> ApiResponse:
     """
     Process the incoming request based on the command and route it to appropriate handlers.
     :param cmd: The command indicating the action to perform.
@@ -37,7 +39,7 @@ async def process_request(cmd: str, db: AsyncSession, data: dict = None) -> ApiR
     """
     try:
         if cmd == "get_all_floras":
-            res = await get_floras(db)
+            res = await get_floras(db, rpc_consumer)
 
             if res.code == 200:
                 return ApiResponse(status="success", code=res.code, data=res.data)
@@ -51,7 +53,7 @@ async def process_request(cmd: str, db: AsyncSession, data: dict = None) -> ApiR
                     status="error", code=400, data="Flora ID not provided"
                 )
 
-            res = await get_flora(flora_id, db)
+            res = await get_flora(flora_id, db, rpc_consumer)
 
             if res.code == 200:
                 return ApiResponse(status="success", code=res.code, data=res.data)

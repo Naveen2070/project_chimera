@@ -38,6 +38,7 @@ QUEUE_NAME = os.getenv("QUEUE_NAME")
 async def lifespan(app: FastAPI):
     consumer = RpcConsumer(AMQP_URL, QUEUE_NAME)
     await consumer.connect()
+    app.state.rpc_consumer = consumer
     c = consul.Consul(host=CONSUL_HOST, port=CONSUL_PORT)
     id = str(uuid.uuid4())
     service_id = (

@@ -16,16 +16,17 @@ from typing import Any, Dict, Optional
 import uuid
 from sqlalchemy.future import select
 from src.db.mongo.mongo_connect import mongo_engine
-from sqlalchemy.orm import Session
-from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.model.common import FloraResponse
 from src.model.flora import Flora
 from src.model.mongo_flora import FloraMongo
 from src.model.postgres_flora import FloraPG
+from src.queue.rabbit_consumer import RpcConsumer
 
 
-async def get_floras(db: AsyncSession) -> Optional[FloraResponse]:
+async def get_floras(
+    db: AsyncSession, rpc_consumer: RpcConsumer = None
+) -> Optional[FloraResponse]:
     try:
         result = await db.execute(select(FloraPG))
         florasPg: list[FloraPG] = result.scalars().all()
@@ -67,7 +68,9 @@ async def get_floras(db: AsyncSession) -> Optional[FloraResponse]:
         return FloraResponse(code=500, data=f"An error occurred: {e}")
 
 
-async def get_flora(flora_id: str, db: AsyncSession) -> Optional[FloraResponse]:
+async def get_flora(
+    flora_id: str, db: AsyncSession, rpc_consumer: RpcConsumer = None
+) -> Optional[FloraResponse]:
     try:
         uid = uuid.UUID(flora_id)
     except ValueError:

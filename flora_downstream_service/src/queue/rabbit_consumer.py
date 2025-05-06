@@ -56,7 +56,10 @@ class RpcConsumer:
                 print(f"Received JSON request: {request_data}")
                 async for db in get_db():
                     response_data = await process_request(
-                        cmd=request_data.pattern.cmd, db=db, data=request_data.data
+                        cmd=request_data.pattern.cmd,
+                        db=db,
+                        data=request_data.data,
+                        rpc_consumer=self,
                     )
                     break
 
@@ -83,6 +86,31 @@ class RpcConsumer:
                 print("Error: Failed to decode JSON message body")
             except Exception as e:
                 print(f"Error: {e}")
+
+    async def sendMessage(
+        self, data: dict, pattern_cmd: str, queue_name: str = None
+    ) -> None:
+        """
+        Send a fire-and-forget message to the specified queue.
+
+        :param data: The data payload to send.
+        :param pattern_cmd: The command pattern for routing.
+        :param queue_name: The target queue. Defaults to self.queue_name.
+        """
+        target_queue = queue_name or self.queue_name
+
+        message_body = {
+            "pattern": pattern_cmd,
+            "data": data,
+        }
+
+        await self.channel.default_exchange.publish(
+            Message(
+                body=json.dumps(message_body).encode(), content_type="application/json"
+            ),
+            routing_key=target_queue,
+        )
+        print(f"Fire-and-forget message sent to queue: {target_queue}")
 
     async def start(self) -> None:
         """
