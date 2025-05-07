@@ -18,6 +18,7 @@ from sqlalchemy.future import select
 from src.db.mongo.mongo_connect import mongo_engine
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.model.common import FloraResponse
+from src.model.error_dto import ErrorDTO
 from src.model.flora import Flora
 from src.model.mongo_flora import FloraMongo
 from src.model.postgres_flora import FloraPG
@@ -42,6 +43,19 @@ async def get_floras(
                 )
             except Exception as e:
                 print(f"An error occurred when retrieving Mongo data: {e}")
+                await rpc_consumer.sendMessage(
+                    ErrorDTO(
+                        type="error",
+                        status="Internal Server Error",
+                        code=500,
+                        data={
+                            "flora_id": str(floraPg.id),
+                            "error": f"An error occurred when retrieving Mongo data: {e}",
+                        },
+                    ).to_dict(),
+                    pattern_cmd="flora.getAll",
+                    queue_name="error_dump_queue",
+                )
                 return FloraResponse(
                     code=500,
                     data=f"An error occurred when retrieving Mongo data: {e}",
@@ -60,11 +74,49 @@ async def get_floras(
             )
             floras.append(floraRes.model_dump_json())
 
+        if not floras:
+            await rpc_consumer.sendMessage(
+                ErrorDTO(
+                    type="success",
+                    status="success",
+                    code=200,
+                    data={
+                        "msg": "No flora found",
+                    },
+                ).to_dict(),
+                pattern_cmd="flora.getAll",
+                queue_name="error_dump_queue",
+            )
+            return FloraResponse(code=200, data=None)
+        await rpc_consumer.sendMessage(
+            ErrorDTO(
+                type="success",
+                status="success",
+                code=200,
+                data={
+                    "msg": "Floras fetched successfull",
+                },
+            ).to_dict(),
+            pattern_cmd="flora.getAll",
+            queue_name="error_dump_queue",
+        )
         return FloraResponse(code=200, data=floras)
 
     except Exception as e:
         # Handle exceptions and log or raise them accordingly
         print(f"An error occurred: {e}")
+        await rpc_consumer.sendMessage(
+            ErrorDTO(
+                type="error",
+                status="Internal Server Error",
+                code=500,
+                data={
+                    "error": f"An error occurred: {e}",
+                },
+            ).to_dict(),
+            pattern_cmd="flora.getAll",
+            queue_name="error_dump_queue",
+        )
         return FloraResponse(code=500, data=f"An error occurred: {e}")
 
 

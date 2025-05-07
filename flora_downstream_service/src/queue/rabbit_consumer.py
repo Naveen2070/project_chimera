@@ -12,12 +12,10 @@
 # 		See the License for the specific language governing permissions and
 # 		limitations under the License.
 
-import asyncio
 import json
 from aio_pika import connect, Message, IncomingMessage
 from aio_pika.abc import AbstractConnection, AbstractChannel, AbstractQueue
 
-from src.flora.router import get_db, process_request
 from src.queue.message_decoder import RpcMessage
 
 
@@ -45,6 +43,8 @@ class RpcConsumer:
         print(f"Connected to queue: {self.queue_name}")
 
     async def on_request(self, message: IncomingMessage) -> None:
+        from src.flora.router import get_db, process_request
+
         """
         Handle incoming RPC requests, process them, and route them to different processors based on the pattern field.
         :param message: The incoming message from the queue.
