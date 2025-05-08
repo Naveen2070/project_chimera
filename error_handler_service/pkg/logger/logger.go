@@ -106,7 +106,7 @@ func LogFatal(message string) {
 
 // createBaseLogDirectories ensures the logs/ directory and its subdirectories exist
 func createBaseLogDirectories() {
-	baseDirs := []string{"logs/routes", "logs/info", "logs/error", "logs/fatal"}
+	baseDirs := []string{"logs/routes", "logs/info", "logs/error", "logs/fatal", "logs/warning"}
 	for _, dir := range baseDirs {
 		ensureDirectoryExists(dir)
 	}
@@ -132,7 +132,6 @@ const dateLayout = "2006-01-02"
 
 func ArchiveOldLogs() {
 	logTypes := []string{"info", "error", "warning", "fatal", "routes"}
-	cutoff := time.Now().AddDate(0, 0, -15)
 
 	for _, logType := range logTypes {
 		dir := filepath.Join("logs", logType)
@@ -148,14 +147,19 @@ func ArchiveOldLogs() {
 
 			baseName := strings.TrimSuffix(info.Name(), ".log")
 			fileDate, err := time.Parse(dateLayout, baseName)
-			if err != nil || !fileDate.Before(cutoff) {
+			if err != nil {
 				return nil
 			}
 
-			bucketStart := fileDate.AddDate(0, 0, -((fileDate.Day() - 1) % 15))
-			bucketEnd := bucketStart.AddDate(0, 0, 14)
-			rangeKey := fmt.Sprintf("%s-%s", bucketStart.Format("02-01-2006"), bucketEnd.Format("02-01-2006"))
+			// Skip files from current month
+			now := time.Now()
+			firstOfCurrentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+			if !fileDate.Before(firstOfCurrentMonth) {
+				return nil
+			}
 
+			// Use "MM-YYYY" as grouping key
+			rangeKey := fileDate.Format("01-2006")
 			filesGrouped[rangeKey] = append(filesGrouped[rangeKey], path)
 			return nil
 		})
